@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assinatura do Contrato | Help!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#FFC107; --dark:#000; --light:#fff; --muted:#666; --border:#e5e5e5; --radius:14px; }
+    *{box-sizing:border-box} body{margin:0;font:500 16px/1.6 'Open Sans',ui-sans-serif;color:#111;background:#fff}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);z-index:10}
+    .container{max-width:900px;margin:0 auto;padding:16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:30px;height:30px;border-radius:8px;object-fit:cover}
+    .grid{display:grid;gap:14px;grid-template-columns:1fr 1fr} .full{grid-column:1/-1}
+    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border)}
+    label{font-size:13px;color:#444}
+    .card{border:1px solid var(--border);padding:16px;border-radius:var(--radius)}
+    .btn{border:0;background:linear-gradient(180deg,#FFD54F,#FFC107);color:#000;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-family:'Montserrat',sans-serif;box-shadow:0 6px 18px rgba(255,193,7,.25)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    canvas{display:block;width:100%;height:160px;background:#f8f8f8;border:1px dashed #ccc;border-radius:10px}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.3s}
+    .toast.show{opacity:1;transform:none}
+    .confetti{position:fixed;inset:0;pointer-events:none;display:none}
+    @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div class="brand">
+      <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!">
+      <div><strong style="font-family:'Montserrat',sans-serif">Help! – Assinatura</strong><div style="font-size:12px;color:#666">Preencha seus dados e assine abaixo</div></div>
+    </div>
+    <button class="btn" onclick="location.href='contract.html'">Ler Contrato</button>
+  </div>
+</header>
+
+<main class="container">
+  <form class="grid" onsubmit="submitForm(event)">
+    <div>
+      <label>Plano</label>
+      <select id="fldPlano" onchange="updateValor()">
+        <option>Help! Start</option>
+        <option selected>Help! Prime</option>
+      </select>
+    </div>
+    <div>
+      <label>Valor</label>
+      <input id="fldValor" value="R$ 2.000,00/mês" readonly />
+    </div>
+    <div>
+      <label>CNPJ</label>
+      <input id="fldCnpj" required placeholder="00.000.000/0000-00" oninput="maskCNPJ(this)" />
+    </div>
+    <div class="full">
+      <label>Razão Social</label>
+      <input id="fldRazao" required placeholder="Nome da Empresa LTDA"/>
+    </div>
+    <div>
+      <label>Responsável</label>
+      <input id="fldResp" required placeholder="Nome completo"/>
+    </div>
+    <div>
+      <label>E-mail</label>
+      <input id="fldEmail" type="email" required placeholder="contato@empresa.com"/>
+    </div>
+    <div class="full">
+      <label>Telefone/WhatsApp</label>
+      <input id="fldFone" required placeholder="(00) 00000-0000" oninput="maskPhone(this)" />
+    </div>
+    <div class="full card">
+      <label>Assinatura (desenhe abaixo)</label>
+      <canvas id="sigCanvas"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" type="button" onclick="clearSignature()">Limpar Assinatura</button>
+      </div>
+    </div>
+    <div class="full">
+      <label><input type="checkbox" id="fldAceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
+    </div>
+    <div class="full actions">
+      <button type="submit" class="btn">Gerar PDF + WhatsApp</button>
+    </div>
+  </form>
+</main>
+
+<div class="toast" id="toast">PDF gerado e WhatsApp aberto. Obrigado!</div>
+<canvas class="confetti" id="confetti"></canvas>
+
+<script>
+  const { jsPDF } = window.jspdf;
+  let sigPad;
+
+  function initSigPad() {
+    const c = document.getElementById('sigCanvas');
+    const rect = c.getBoundingClientRect();
+    c.width = Math.max(320, Math.floor(rect.width));
+    c.height = 160;
+    if (sigPad) sigPad.off();
+    sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor:'#000' });
+  }
+
+  window.addEventListener('load', initSigPad);
+  window.addEventListener('resize', initSigPad);
+
+  function clearSignature(){ sigPad && sigPad.clear(); }
+
+  function updateValor() {
+    const plano = document.getElementById('fldPlano').value;
+    document.getElementById('fldValor').value = plano.includes('Prime') ? 'R$ 2.000,00/mês' : 'R$ 1.500,00/mês';
+  }
+
+  function maskCNPJ(i) {
+    let v = i.value.replace(/\D/g,'');
+    v = v.replace(/(\d{2})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1.$2');
+    v = v.replace(/(\d{3})(\d)/, '$1/$2');
+    v = v.replace(/(\d{4})(\d)/, '$1-$2');
+    i.value = v.slice(0,18);
+  }
+
+  function maskPhone(i) {
+    let v = i.value.replace(/\D/g,'');
+    v = v.replace(/(\d{0,2})(\d)/, '($1) $2');
+    v = v.replace(/(\(\d{2}\) \d{5})(\d)/, '$1-$2');
+    i.value = v.slice(0, 15);
+  }
+
+  function genDocId() {
+    const d = new Date();
+    const pad = n=>('0'+n).slice(-2);
+    return 'HELP-' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + Math.floor(Math.random()*9000+1000);
+  }
+
+  async function buildPdf(data, assinaturaPNG) {
+    const respTpl = await fetch('contract-fill.html');
+    const tpl = await respTpl.text();
+    const now = new Date();
+    const dataHora = now.toLocaleString('pt-BR');
+    const docId = genDocId();
+    const pdfHtml = tpl
+      .replaceAll('{{RAZAO}}', escapeHtml(data.razao))
+      .replaceAll('{{CNPJ}}', escapeHtml(data.cnpj))
+      .replaceAll('{{RESP}}', escapeHtml(data.resp))
+      .replaceAll('{{EMAIL}}', escapeHtml(data.email))
+      .replaceAll('{{FONE}}', escapeHtml(data.fone))
+      .replaceAll('{{PLANO}}', escapeHtml(data.plano))
+      .replaceAll('{{VALOR}}', data.valorPlano)
+      .replaceAll('{{DATA}}', escapeHtml(data.dataBR))
+      .replaceAll('{{DATETIME}}', escapeHtml(dataHora))
+      .replaceAll('{{DOCID}}', escapeHtml(docId))
+      .replaceAll('{{ASSINATURA}}', '<img src="' + assinaturaPNG + '" alt="Assinatura" style="height:80px">');
+
+    const holder = document.createElement('div');
+    holder.style.position = 'fixed'; holder.style.left='-200vw'; holder.style.top='0';
+    holder.style.width='794px';
+    holder.innerHTML = pdfHtml;
+    document.body.appendChild(holder);
+
+    const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
+    const nodes = holder.querySelectorAll('.page');
+    for(let i=0;i<nodes.length;i++) {
+      const canvas = await html2canvas(nodes[i], { scale:2, backgroundColor:'#ffffff' });
+      const img = canvas.toDataURL('image/png');
+      pdf.addImage(img, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+      if(i < nodes.length-1) pdf.addPage();
+    }
+    document.body.removeChild(holder);
+    return { pdf, docId, dataHora };
+  }
+
+  function collectData() {
+    const plano = document.getElementById('fldPlano').value;
+    const data = new Date();
+    return {
+      plano,
+      cnpj: document.getElementById('fldCnpj').value.trim(),
+      razao: document.getElementById('fldRazao').value.trim(),
+      resp: document.getElementById('fldResp').value.trim(),
+      email: document.getElementById('fldEmail').value.trim(),
+      fone: document.getElementById('fldFone').value.trim(),
+      aceite: document.getElementById('fldAceite').checked,
+      dataBR: data.toLocaleDateString('pt-BR'),
+      valorPlano: document.getElementById('fldValor').value
+    };
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    const d = collectData();
+    if(!(d.cnpj && d.razao && d.resp && d.email && d.fone && d.aceite)) { alert('Preencha todos os campos e marque o aceite.'); return; }
+    if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
+    const assinaturaPNG = sigPad.toDataURL('image/png');
+    const built = await buildPdf(d, assinaturaPNG);
+    const { pdf, docId, dataHora } = built;
+    const fileName = 'Contrato_' + d.razao.replace(/\s+/g,'_') + '_' + docId + '.pdf';
+    pdf.save(fileName);
+
+    const resumo = 'Proposta Help!%0APlano: ' + encodeURIComponent(d.plano)
+      + '%0AValor: ' + encodeURIComponent(d.valorPlano)
+      + '%0ARazão Social: ' + encodeURIComponent(d.razao)
+      + '%0ACNPJ: ' + encodeURIComponent(d.cnpj)
+      + '%0AResponsável: ' + encodeURIComponent(d.resp)
+      + '%0AE-mail: ' + encodeURIComponent(d.email)
+      + '%0AFone: ' + encodeURIComponent(d.fone)
+      + '%0AData/Hora: ' + encodeURIComponent(dataHora)
+      + '%0AID: ' + encodeURIComponent(docId);
+    window.open('https://wa.me/5515997367675?text=' + resumo, '_blank');
+
+    showToast(); shootConfetti();
+  }
+
+  function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
+
+  function shootConfetti() {
+    const c = document.getElementById('confetti'); const ctx = c.getContext('2d');
+    c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
+    const pieces = Array.from({length:140}, (_,i)=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
+    let t=0;
+    function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; }
+    draw();
+  }
+
+  function escapeHtml(str){return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+</script>
+</body>
+</html>

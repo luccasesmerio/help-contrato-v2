@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contrato – Leitura | Help!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#FFC107; --dark:#000; --light:#fff; --muted:#666; --border:#e5e5e5; --radius:14px; }
+    *{box-sizing:border-box} body{margin:0;font:500 16px/1.65 'Open Sans',ui-sans-serif;color:#111;background:#fff}
+    header{position:sticky;top:0;z-index:20;backdrop-filter:saturate(140%) blur(6px)}
+    .topbar{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.9)}
+    .brand{display:flex;align-items:center;gap:10px} .brand img{width:30px;height:30px;border-radius:8px;object-fit:cover}
+    .progress{height:4px;background:#eee} .bar{height:4px;width:0;background:var(--brand);transition:width .1s}
+    .container{max-width:900px;margin:0 auto;padding:18px 16px}
+    .hero{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .btn{border:0;background:linear-gradient(180deg,#FFD54F,#FFC107);color:#000;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-family:'Montserrat',sans-serif;box-shadow:0 6px 18px rgba(255,193,7,.25)}
+    .btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .gate{position:sticky;bottom:0;padding:12px 16px;background:rgba(255,255,255,.98);border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+    .contract{border:1px solid var(--border);border-radius:var(--radius);padding:16px;max-height:65vh;overflow:auto}
+    .clause h3{margin:16px 0 6px;font-family:'Montserrat',sans-serif}
+    .table{width:100%;border-collapse:collapse;font-size:14px}
+    .table th,.table td{border:1px solid #ddd;padding:8px;text-align:left}
+    .table thead th{background:#f7f7f7}
+    .pill{display:inline-block;font-size:12px;padding:4px 8px;border-radius:999px;background:#111;color:#fff;font-family:'Montserrat',sans-serif}
+    .readpct{font-size:12px;color:#666;margin-left:8px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!">
+      <div><strong style="font-family:'Montserrat',sans-serif">Help! Agência de Marketing</strong><div class="muted" style="font-size:12px">Contrato – leitura</div></div>
+    </div>
+    <div class="muted readpct" id="readPct">Leitura: 0%</div>
+  </div>
+  <div class="progress"><div class="bar" id="progressBar"></div></div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div>
+      <h1 style="font-family:'Montserrat',sans-serif">Contrato de Prestação de Serviços</h1>
+    </div>
+    <span class="pill">Help! Start / Help! Prime</span>
+  </section>
+
+  <div class="contract" id="reader" aria-label="Texto integral do contrato">
+    <div class="clause"><h3>2. Natureza e Alcance</h3><p>Contrato entre pessoas jurídicas, regido pelo Código Civil. Não se aplica o CDC.</p></div>
+    <div class="clause"><h3>3. Objeto</h3><p>Prestação de serviços de marketing digital conforme plano escolhido (Anexo I). Reforço Estratégico opcional (Anexo II).</p></div>
+    <div class="clause"><h3>4. Escopo e Limites</h3><p>4.1. Escopo no Anexo I. 4.2. Criativos para tráfego: produção contínua conforme performance. Conteúdo para redes sociais (quando incluso) segue a quantidade do Anexo I. 4.3. Itens fora do escopo via Change Request (CR). 4.4. Verba de mídia não inclusa.</p></div>
+    <div class="clause"><h3>5. Obrigações da Contratada</h3><p>Diligência técnica; SLA 24h úteis para resposta; confidencialidade; relatórios mensais.</p></div>
+    <div class="clause"><h3>6. Obrigações do Contratante</h3><p>Fornecer materiais/acessos em até 48h úteis; pagamentos em dia; materiais sem violação de terceiros.</p></div>
+    <div class="clause"><h3>7. Captação</h3><p>1 sessão mensal de captação de fotos/vídeos no estabelecimento, com edição básica. Deslocamento fora de Itapetininga-SP definido previamente.</p></div>
+    <div class="clause"><h3>8. Social Media (Help! Prime)</h3><p>Gestão de Instagram: 1 post imagem + 1 post vídeo/semana (~8/mês). Sem interação DMs/comentários; sem produção avançada; outras redes não incluídas.</p></div>
+    <div class="clause"><h3>9. Propriedade Intelectual</h3><p>Metodologias e templates da Contratada. Materiais finais: licença de uso não exclusiva e por prazo indeterminado, condicionada à adimplência. Arquivos editáveis/brutos não incluídos.</p></div>
+    <div class="clause"><h3>10. Resultados e Responsabilidade</h3><p>Sem garantia de resultados específicos. Responsabilidade limitada ao valor pago nos 3 meses anteriores ao evento.</p></div>
+    <div class="clause"><h3>11. Confidencialidade</h3><p>Sigilo por 5 anos após término.</p></div>
+    <div class="clause"><h3>12. Conformidade e LGPD</h3><p>Contratante é Controlador; Contratada é Operadora. Contratante garante base legal para dados.</p></div>
+    <div class="clause"><h3>13. Exclusividade e Não-Aliciamento</h3><p>Sem exclusividade salvo aditivo. Não-aliciamento por 12 meses; multa de 3 remunerações.</p></div>
+    <div class="clause"><h3>14. Remuneração e Reajuste</h3><p>Valores no Anexo I/II. Reajuste anual IPCA. Atrasos: multa 2% + juros 1% a.m. pro rata + correção.</p></div>
+    <div class="clause"><h3>15. Vigência e Rescisão</h3><p>Vigência inicial 90 dias; renovação mensal. Rescisão com 30 dias. Durante vigência inicial: pagamento proporcional.</p></div>
+    <div class="clause"><h3>16. Foro</h3><p>Itapetininga-SP.</p></div>
+
+    <h3 style="font-family:'Montserrat',sans-serif">Anexo I – Planos e Benefícios</h3>
+    <table class="table" role="table">
+      <thead>
+        <tr><th>Item</th><th>Help! Start</th><th>Help! Prime</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Tráfego Pago (Meta Ads)</td><td>Inclui</td><td>Inclui</td></tr>
+        <tr><td>Captação de Fotos e Vídeos (1 sessão/mês)</td><td>Inclui</td><td>Inclui</td></tr>
+        <tr><td>Criativos para Anúncios</td><td>Conforme performance</td><td>Conforme performance</td></tr>
+        <tr><td>Relatório Mensal</td><td>Inclui</td><td>Inclui</td></tr>
+        <tr><td>Reunião de Resultados Mensal</td><td>Inclui</td><td>Inclui</td></tr>
+        <tr><td>Gestão de Instagram</td><td>—</td><td>8/mês</td></tr>
+        <tr><td>Calendário Editorial</td><td>—</td><td>Inclui</td></tr>
+        <tr><td>Integração Anúncio + Orgânico</td><td>—</td><td>Inclui</td></tr>
+        <tr><td>Produção de Conteúdo Extra</td><td>Não Inclui</td><td>Não Inclui</td></tr>
+        <tr><td>Gestão de Outras Plataformas Ads</td><td>Não Inclui</td><td>Não Inclui</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="font-family:'Montserrat',sans-serif">Anexo II – Reforço Estratégico</h3>
+    <p><strong>Estratégia Comercial – R$ 1.500/mês.</strong> Consultoria personalizada: ouvimos a fundo o seu negócio, avaliamos processos, cortamos o que não funciona e implantamos ações para vender mais, gastar menos e otimizar cada etapa da operação.</p>
+  </div>
+</main>
+
+<div class="gate" aria-live="polite">
+  <div style="display:flex;align-items:center;gap:10px">
+    <input type="checkbox" id="ack">
+    <label for="ack"><strong>✔️ Li tudo e estou pronto para fechar com a Help!</strong></label>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" onclick="location.href='index.html'">Voltar</button>
+    <button class="btn" id="btnSign" disabled onclick="location.href='sign.html'">Assinar o Contrato</button>
+  </div>
+</div>
+
+<script>
+  const bar = document.getElementById('progressBar');
+  const reader = document.getElementById('reader');
+  const ack = document.getElementById('ack');
+  const btn = document.getElementById('btnSign');
+  const readPct = document.getElementById('readPct');
+
+  function checkGate() {
+    const total = reader.scrollHeight - reader.clientHeight;
+    const progress = Math.max(0, Math.min(1, reader.scrollTop / (total || 1)));
+    bar.style.width = ((progress*100)|0) + '%';
+    readPct.textContent = 'Leitura: ' + (((progress*100)|0)) + '%';
+    const ok = progress >= 0.9 && ack.checked;
+    btn.disabled = !ok;
+  }
+
+  reader.addEventListener('scroll', checkGate);
+  ack.addEventListener('change', checkGate);
+  window.addEventListener('load', checkGate);
+</script>
+</body>
+</html>
