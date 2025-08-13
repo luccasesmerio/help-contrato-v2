@@ -17,6 +17,8 @@
     .foot{position:absolute;bottom:18pt;left:44pt;right:44pt;font-size:9px;color:#666;display:flex;justify-content:space-between}
     .foot .id{font-weight:600}
     .opt{display:inline} .hidden{display:none}
+    /* Fallback visual de erro */
+    .invalid{color:#b00020; text-decoration: underline dotted;}
   </style>
 </head>
 <body>
@@ -31,11 +33,11 @@
       <strong>Contratante:</strong>
       <span data-razao>{{RAZAO}}</span>
       (<span data-pessoa>{{PESSOA_TIPO}}</span>),
-      CPF/CNPJ <span data-doc>{{DOC_ID}}</span>
+      CPF/CNPJ <span data-doc data-validate="doc">{{DOC_ID}}</span>
       <span class="opt" data-opt="rg"> • RG: <span data-rg>{{RG}}</span></span>,
       <span class="opt" data-opt="endereco">Endereço: <span data-endereco>{{ENDERECO}}</span></span>,
       e-mail <span data-email>{{EMAIL}}</span>,
-      telefone <span data-fone>{{FONE}}</span>.
+      telefone <span data-fone data-validate="fone">{{FONE}}</span>.
       <span class="opt" data-opt="representante"> Representado por <span data-representante>{{REPRESENTANTE}}</span> (se aplicável).</span>
     </p>
     <p><strong>Contratada:</strong> HELP! AGÊNCIA DE MARKETING.</p>
@@ -140,7 +142,7 @@
       <div><strong>Assinatura do Contratante:</strong></div>
       <div>{{ASSINATURA}}</div>
       <div class="muted">Assinado digitalmente em <span data-date>{{DATA}}</span></div>
-      <div class="muted opt" data-opt="assinante-doc">CPF/CNPJ do assinante: <span data-doc>{{DOC_ID}}</span></div>
+      <div class="muted opt" data-opt="assinante-doc">CPF/CNPJ do assinante: <span data-doc data-validate="doc">{{DOC_ID}}</span></div>
       <div class="muted opt" data-opt="assinante-rg">RG do assinante: <span data-rg-ass>{{RG_ASS}}</span></div>
     </div>
 
@@ -173,35 +175,72 @@
 
   <script>
     (function(){
+      // ————— Helpers
       const getDigits = s => (s||"").toString().replace(/\D+/g,'');
-      const isEmpty = s => !s || String(s).trim()==='' || String(s).trim()==='—' || String(s).trim()==='{{RG}}' || String(s).includes('{{');
+      const isEmpty = s => !s || String(s).trim()==='' || String(s).includes('{{');
 
+      // Máscaras
+      function maskCPF(d){ return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
+      function maskCNPJ(d){ return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); }
       function maskDoc(s){
         const d = getDigits(s);
-        if(d.length===11){
-          return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); // CPF
-        }
-        if(d.length===14){
-          return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); // CNPJ
-        }
-        return s; // mantém original se não bater 11/14
+        if(d.length===11) return maskCPF(d);
+        if(d.length===14) return maskCNPJ(d);
+        return s;
       }
-
       function maskPhone(s){
         const d = getDigits(s);
-        if(d.length===11){ // celular
-          return d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
-        }
-        if(d.length===10){ // fixo
-          return d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3');
-        }
+        if(d.length===11) return d.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+        if(d.length===10) return d.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3');
         return s;
       }
 
-      // Aplica máscara a todos [data-doc]
+      // Validações (inclui dígitos verificadores de CPF/CNPJ)
+      function validateCPF(value){
+        const d = getDigits(value);
+        if(d.length!==11 || /^(\d)\1{10}$/.test(d)) return false;
+        let sum=0; for(let i=0;i<9;i++) sum+=parseInt(d[i])*(10-i);
+        let r = (sum*10)%11; if(r===10) r=0; if(r!==parseInt(d[9])) return false;
+        sum=0; for(let i=0;i<10;i++) sum+=parseInt(d[i])*(11-i);
+        r = (sum*10)%11; if(r===10) r=0; return r===parseInt(d[10]);
+      }
+      function validateCNPJ(value){
+        const d = getDigits(value);
+        if(d.length!==14 || /^(\d)\1{13}$/.test(d)) return false;
+        const calc = (len) => {
+          let factors = (len===12) ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2];
+          let sum = 0;
+          for(let i=0;i<factors.length;i++) sum += parseInt(d[i]) * factors[i];
+          let r = sum % 11;
+          return (r < 2) ? 0 : 11 - r;
+        };
+        const dv1 = calc(12); if(dv1 !== parseInt(d[12])) return false;
+        const dv2 = calc(13); return dv2 === parseInt(d[13]);
+      }
+      function validateDoc(value){
+        const digits = getDigits(value);
+        if(digits.length===11) return validateCPF(digits);
+        if(digits.length===14) return validateCNPJ(digits);
+        return false;
+      }
+      function validatePhone(value){
+        const d = getDigits(value);
+        return d.length===10 || d.length===11;
+      }
+
+      // Marca inválido (visual)
+      function markInvalid(el, msg){
+        el.classList.add('invalid');
+        el.setAttribute('title', msg);
+        el.setAttribute('aria-label', msg);
+      }
+
+      // ————— Formatação e validação
+      // DOCs (contratante + assinante)
       document.querySelectorAll('[data-doc]').forEach(el=>{
-        const v = el.textContent;
-        el.textContent = maskDoc(v);
+        const raw = el.textContent;
+        const masked = maskDoc(raw);
+        el.textContent = masked;
       });
 
       // Telefone
@@ -225,10 +264,9 @@
         });
       });
 
-      // Se PESSOA_TIPO vier vazio, tenta inferir por DOC
+      // Inferir Pessoa Física/Jurídica se vazio
       document.querySelectorAll('[data-pessoa]').forEach(el=>{
         if(isEmpty(el.textContent)){
-          // pega DOC do mesmo bloco mais próximo
           const parent = el.closest('p') || document;
           const docEl = parent.querySelector('[data-doc]');
           const d = docEl ? getDigits(docEl.textContent) : '';
@@ -237,14 +275,25 @@
         }
       });
 
-      // Limpa placeholders literais que porventura sobraram
+      // Limpa placeholders literais remanescentes
       document.querySelectorAll('[data-razao],[data-email],[data-date],[data-endereco],[data-representante],[data-rg],[data-rg-ass]').forEach(el=>{
-        const t = el.textContent || '';
-        if(/\{\{.+\}\}/.test(t)) el.textContent = ''; // zera se ainda é placeholder
+        if(/\{\{.+\}\}/.test(el.textContent||'')) el.textContent = '';
       });
 
-      // Se endereço ficou vazio, some com vírgulas soltas: já controlado pelo bloco [data-opt="endereco"]
-      // Nada mais a fazer.
+      // ————— VALIDAÇÃO com fallback visual
+      document.querySelectorAll('[data-validate="doc"]').forEach(el=>{
+        const ok = validateDoc(el.textContent);
+        if(!ok){
+          markInvalid(el, 'Documento inválido: use CPF (11 dígitos) ou CNPJ (14) com DV válido.');
+        }
+      });
+
+      document.querySelectorAll('[data-validate="fone"]').forEach(el=>{
+        const ok = validatePhone(el.textContent);
+        if(!ok){
+          markInvalid(el, 'Telefone inválido: esperado DDD + número (10 ou 11 dígitos).');
+        }
+      });
     })();
   </script>
 
