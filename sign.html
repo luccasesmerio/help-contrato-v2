@@ -22,6 +22,8 @@
     .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.3s}
     .toast.show{opacity:1;transform:none}
     .confetti{position:fixed;inset:0;pointer-events:none;display:none}
+    .inline{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .muted{color:#666}
     @media (max-width:860px){ .grid{grid-template-columns:1fr} }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
@@ -41,6 +43,16 @@
 
 <main class="container">
   <form class="grid" onsubmit="submitForm(event)">
+    <!-- Tipo de Pessoa -->
+    <div class="full">
+      <label>Tipo de contratante</label>
+      <div class="inline">
+        <label><input type="radio" name="tipo" value="PF" id="rPF" checked> Pessoa Física (CPF)</label>
+        <label><input type="radio" name="tipo" value="PJ" id="rPJ"> Pessoa Jurídica (CNPJ)</label>
+        <span class="muted" id="hintTipo">• Campos ajustam automaticamente</span>
+      </div>
+    </div>
+
     <div>
       <label>Plano</label>
       <select id="fldPlano" onchange="updateValor()">
@@ -52,18 +64,25 @@
       <label>Valor</label>
       <input id="fldValor" value="R$ 2.000,00/mês" readonly />
     </div>
+
+    <!-- Documento -->
     <div>
-      <label>CNPJ</label>
-      <input id="fldCnpj" required placeholder="00.000.000/0000-00" oninput="maskCNPJ(this)" />
+      <label id="lblDoc">CPF</label>
+      <input id="fldDoc" required placeholder="000.000.000-00" oninput="maskDoc(this)" />
     </div>
+
+    <!-- Nome / Razão -->
     <div class="full">
-      <label>Razão Social</label>
-      <input id="fldRazao" required placeholder="Nome da Empresa LTDA"/>
+      <label id="lblRazao">Nome completo</label>
+      <input id="fldRazao" required placeholder="Seu nome completo"/>
     </div>
-    <div>
-      <label>Responsável</label>
-      <input id="fldResp" required placeholder="Nome completo"/>
+
+    <!-- Responsável (apenas PJ) -->
+    <div id="grpResp">
+      <label id="lblResp">Responsável</label>
+      <input id="fldResp" placeholder="Nome do responsável legal"/>
     </div>
+
     <div>
       <label>E-mail</label>
       <input id="fldEmail" type="email" required placeholder="contato@empresa.com"/>
@@ -72,6 +91,8 @@
       <label>Telefone/WhatsApp</label>
       <input id="fldFone" required placeholder="(00) 00000-0000" oninput="maskPhone(this)" />
     </div>
+
+    <!-- Assinatura -->
     <div class="full card">
       <label>Assinatura (desenhe abaixo)</label>
       <canvas id="sigCanvas"></canvas>
@@ -79,6 +100,7 @@
         <button class="btn" type="button" onclick="clearSignature()">Limpar Assinatura</button>
       </div>
     </div>
+
     <div class="full">
       <label><input type="checkbox" id="fldAceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
     </div>
@@ -95,6 +117,7 @@
   const { jsPDF } = window.jspdf;
   let sigPad;
 
+  // ---------- Init assinatura ----------
   function initSigPad() {
     const c = document.getElementById('sigCanvas');
     const rect = c.getBoundingClientRect();
@@ -103,49 +126,103 @@
     if (sigPad) sigPad.off();
     sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor:'#000' });
   }
-
-  window.addEventListener('load', initSigPad);
+  window.addEventListener('load', ()=>{ initSigPad(); applyTipo(); });
   window.addEventListener('resize', initSigPad);
 
   function clearSignature(){ sigPad && sigPad.clear(); }
 
+  // ---------- Máscaras e validação ----------
+  const getDigits = s => (s||'').toString().replace(/\D+/g,'');
+  function maskPhone(i) {
+    let v = getDigits(i.value);
+    if(v.length > 11) v = v.slice(0,11);
+    i.value = v.length<=10
+      ? v.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (_,$1,$2,$3)=> ($1?`(${ $1 }`) + ($1&&$2?`) ${$2}`: $1?')':'' ) + ($3?`-${$3}`:''))
+      : v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+  function maskCPF(d){ return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
+  function maskCNPJ(d){ return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); }
+  function maskDoc(i){
+    const isPF = document.getElementById('rPF').checked;
+    let d = getDigits(i.value);
+    d = isPF ? d.slice(0,11) : d.slice(0,14);
+    i.value = isPF ? (d.length?maskCPF(d):'') : (d.length?maskCNPJ(d):'');
+  }
+  function vCPF(v){
+    const d=getDigits(v); if(d.length!==11 || /^(\d)\1{10}$/.test(d)) return false;
+    let s=0; for(let i=0;i<9;i++) s+= +d[i]*(10-i);
+    let r=(s*10)%11; if(r===10) r=0; if(r!== +d[9]) return false;
+    s=0; for(let i=0;i<10;i++) s+= +d[i]*(11-i);
+    r=(s*10)%11; if(r===10) r=0; return r=== +d[10];
+  }
+  function vCNPJ(v){
+    const d=getDigits(v); if(d.length!==14 || /^(\d)\1{13}$/.test(d)) return false;
+    const calc = len => { const f=(len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2]; let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i]; const r=s%11; return r<2?0:11-r; };
+    return calc(12)=== +d[12] && calc(13)=== +d[13];
+  }
+
+  // ---------- Dinâmica PF/PJ ----------
+  function applyTipo(){
+    const isPF = document.getElementById('rPF').checked;
+    const lblDoc = document.getElementById('lblDoc');
+    const fldDoc = document.getElementById('fldDoc');
+    const lblRazao = document.getElementById('lblRazao');
+    const fldRazao = document.getElementById('fldRazao');
+    const grpResp = document.getElementById('grpResp');
+    const lblResp = document.getElementById('lblResp');
+
+    // Ajusta rótulos e placeholders
+    lblDoc.textContent = isPF ? 'CPF' : 'CNPJ';
+    fldDoc.placeholder = isPF ? '000.000.000-00' : '00.000.000/0000-00';
+    lblRazao.textContent = isPF ? 'Nome completo' : 'Razão Social';
+    fldRazao.placeholder = isPF ? 'Seu nome completo' : 'Nome da Empresa LTDA';
+
+    // Responsável só em PJ
+    grpResp.style.display = isPF ? 'none' : 'block';
+    lblResp.textContent = 'Responsável';
+    document.getElementById('fldResp').required = !isPF;
+
+    // Limpa doc se trocou de formato
+    fldDoc.value = '';
+  }
+  document.getElementById('rPF').addEventListener('change', applyTipo);
+  document.getElementById('rPJ').addEventListener('change', applyTipo);
+
+  // ---------- Plano ----------
   function updateValor() {
     const plano = document.getElementById('fldPlano').value;
     document.getElementById('fldValor').value = plano.includes('Prime') ? 'R$ 2.000,00/mês' : 'R$ 1.500,00/mês';
   }
 
-  function maskCNPJ(i) {
-    let v = i.value.replace(/\D/g,'');
-    v = v.replace(/(\d{2})(\d)/, '$1.$2');
-    v = v.replace(/(\d{3})(\d)/, '$1.$2');
-    v = v.replace(/(\d{3})(\d)/, '$1/$2');
-    v = v.replace(/(\d{4})(\d)/, '$1-$2');
-    i.value = v.slice(0,18);
-  }
-
-  function maskPhone(i) {
-    let v = i.value.replace(/\D/g,'');
-    v = v.replace(/(\d{0,2})(\d)/, '($1) $2');
-    v = v.replace(/(\(\d{2}\) \d{5})(\d)/, '$1-$2');
-    i.value = v.slice(0, 15);
-  }
-
+  // ---------- Util ----------
   function genDocId() {
     const d = new Date();
     const pad = n=>('0'+n).slice(-2);
     return 'HELP-' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + Math.floor(Math.random()*9000+1000);
   }
+  function escapeHtml(str){return (str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
 
-  async function buildPdf(data, assinaturaPNG) {
+  // ---------- Montagem PDF ----------
+  async function buildPdf(data, assinaturaPNG, isPF) {
+    // Carrega template do contrato preenchível
     const respTpl = await fetch('contract-fill.html');
-    const tpl = await respTpl.text();
+    let tpl = await respTpl.text();
+
     const now = new Date();
     const dataHora = now.toLocaleString('pt-BR');
     const docId = genDocId();
+
+    // Mapeia campos conforme PF/PJ
+    const displayName = data.razao;                        // PF: Nome completo | PJ: Razão Social
+    const responsavel  = isPF ? data.razao : (data.resp||data.razao);
+    const docGeneric   = data.doc;                         // CPF ou CNPJ, já mascarado
+
+    // Se o template antigo tiver "CNPJ", forçamos exibir "CPF/CNPJ"
+    tpl = tpl.replaceAll('CNPJ', 'CPF/CNPJ');
+
     const pdfHtml = tpl
-      .replaceAll('{{RAZAO}}', escapeHtml(data.razao))
-      .replaceAll('{{CNPJ}}', escapeHtml(data.cnpj))
-      .replaceAll('{{RESP}}', escapeHtml(data.resp))
+      .replaceAll('{{RAZAO}}', escapeHtml(displayName))
+      .replaceAll('{{RESP}}', escapeHtml(responsavel))
       .replaceAll('{{EMAIL}}', escapeHtml(data.email))
       .replaceAll('{{FONE}}', escapeHtml(data.fone))
       .replaceAll('{{PLANO}}', escapeHtml(data.plano))
@@ -153,8 +230,14 @@
       .replaceAll('{{DATA}}', escapeHtml(data.dataBR))
       .replaceAll('{{DATETIME}}', escapeHtml(dataHora))
       .replaceAll('{{DOCID}}', escapeHtml(docId))
+      .replaceAll('{{PESSOA_TIPO}}', isPF ? 'Pessoa Física' : 'Pessoa Jurídica')
+      // Compat: preenche tanto {{CNPJ}} quanto {{CPF}} ou {{DOC_ID}}
+      .replaceAll('{{CNPJ}}', escapeHtml(docGeneric))
+      .replaceAll('{{CPF}}',  escapeHtml(docGeneric))
+      .replaceAll('{{DOC_ID}}',escapeHtml(docGeneric))
       .replaceAll('{{ASSINATURA}}', '<img src="' + assinaturaPNG + '" alt="Assinatura" style="height:80px">');
 
+    // Render invisível e captura páginas
     const holder = document.createElement('div');
     holder.style.position = 'fixed'; holder.style.left='-200vw'; holder.style.top='0';
     holder.style.width='794px';
@@ -173,12 +256,16 @@
     return { pdf, docId, dataHora };
   }
 
+  // ---------- Coleta dados ----------
   function collectData() {
+    const isPF = document.getElementById('rPF').checked;
     const plano = document.getElementById('fldPlano').value;
     const data = new Date();
+
     return {
+      isPF,
       plano,
-      cnpj: document.getElementById('fldCnpj').value.trim(),
+      doc: document.getElementById('fldDoc').value.trim(),
       razao: document.getElementById('fldRazao').value.trim(),
       resp: document.getElementById('fldResp').value.trim(),
       email: document.getElementById('fldEmail').value.trim(),
@@ -189,43 +276,58 @@
     };
   }
 
+  // ---------- Submit ----------
   async function submitForm(e) {
     e.preventDefault();
     const d = collectData();
-    if(!(d.cnpj && d.razao && d.resp && d.email && d.fone && d.aceite)) { alert('Preencha todos os campos e marque o aceite.'); return; }
+    // Validação de documento conforme tipo
+    const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
+    if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
+
+    // Campos obrigatórios
+    if(!(d.doc && d.razao && d.email && d.fone && d.aceite)){ alert('Preencha todos os campos obrigatórios e marque o aceite.'); return; }
+    if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
+
     if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
     const assinaturaPNG = sigPad.toDataURL('image/png');
-    const built = await buildPdf(d, assinaturaPNG);
+
+    // Gera PDF
+    const built = await buildPdf(d, assinaturaPNG, d.isPF);
     const { pdf, docId, dataHora } = built;
-    const fileName = 'Contrato_' + d.razao.replace(/\s+/g,'_') + '_' + docId + '.pdf';
+
+    // Salva local
+    const nameBase = d.razao.replace(/\s+/g,'_');
+    const fileName = 'Contrato_' + nameBase + '_' + docId + '.pdf';
     pdf.save(fileName);
 
+    // Abre WhatsApp com resumo
+    const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
     const resumo = 'Proposta Help!%0APlano: ' + encodeURIComponent(d.plano)
       + '%0AValor: ' + encodeURIComponent(d.valorPlano)
-      + '%0ARazão Social: ' + encodeURIComponent(d.razao)
-      + '%0ACNPJ: ' + encodeURIComponent(d.cnpj)
-      + '%0AResponsável: ' + encodeURIComponent(d.resp)
+      + '%0A' + rotDoc + ': ' + encodeURIComponent(d.doc)
+      + '%0ANome/Razão: ' + encodeURIComponent(d.razao)
+      + (d.isPF ? '' : '%0AResponsável: ' + encodeURIComponent(d.resp||''))
       + '%0AE-mail: ' + encodeURIComponent(d.email)
       + '%0AFone: ' + encodeURIComponent(d.fone)
       + '%0AData/Hora: ' + encodeURIComponent(dataHora)
       + '%0AID: ' + encodeURIComponent(docId);
+    // ajuste o número abaixo:
     window.open('https://wa.me/5519984278886?text=' + resumo, '_blank');
 
     showToast(); shootConfetti();
   }
 
+  // ---------- UI feedback ----------
   function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
 
   function shootConfetti() {
     const c = document.getElementById('confetti'); const ctx = c.getContext('2d');
     c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
-    const pieces = Array.from({length:140}, (_,i)=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
+    const pieces = Array.from({length:140}, ()=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
     let t=0;
     function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; }
     draw();
   }
-
-  function escapeHtml(str){return str.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
 </script>
 </body>
 </html>
