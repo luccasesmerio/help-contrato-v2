@@ -40,7 +40,7 @@
       <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!">
       <div><strong style="font-family:'Montserrat',sans-serif">Help! – Assinatura</strong><div style="font-size:12px;color:#666">Preencha seus dados e assine abaixo</div></div>
     </div>
-    <button class="btn" onclick="location.href='contract.html'">Ler Contrato</button>
+    <button class="btn" type="button" onclick="location.href='contract.html'">Ler Contrato</button>
   </div>
 </header>
 
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Responsável (apenas PJ) -->
-    <div id="grpResp">
+    <div id="grpResp" style="display:none">
       <label id="lblResp">Responsável</label>
       <input id="fldResp" placeholder="Nome do responsável legal"/>
     </div>
@@ -117,9 +117,11 @@
 <canvas class="confetti" id="confetti"></canvas>
 
 <script>
+  // libs
   const { jsPDF } = window.jspdf;
   let sigPad;
 
+  // ---------- Assinatura ----------
   function initSigPad() {
     const c = document.getElementById('sigCanvas');
     const rect = c.getBoundingClientRect();
@@ -131,14 +133,19 @@
     c.style.height = '160px';
     const ctx = c.getContext('2d');
     ctx.scale(ratio, ratio);
-    if (sigPad) sigPad.off();
+    if (sigPad && sigPad.off) sigPad.off();
+    if (typeof SignaturePad !== 'function') {
+      alert('Biblioteca de assinatura não carregou. Verifique sua conexão.');
+      return;
+    }
     sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor:'#000' });
     if (prev) { try { sigPad.fromData(prev); } catch(_){} }
   }
   window.addEventListener('load', ()=>{ initSigPad(); applyTipo(); updateValor(); });
   let resizeTimer; window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(initSigPad,150); });
-  document.addEventListener('click', (e)=>{ if(e.target && e.target.id==='btnLimpar') sigPad.clear(); });
+  document.getElementById('btnLimpar').addEventListener('click', ()=> sigPad && sigPad.clear());
 
+  // ---------- Máscaras/validações ----------
   const getDigits = s => (s||'').toString().replace(/\D+/g,'');
   function maskPhone(i) {
     let v = getDigits(i.value).slice(0,11);
@@ -166,10 +173,15 @@
   }
   function vCNPJ(v){
     const d=getDigits(v); if(d.length!==14 || /^(\d)\1{13}$/.test(d)) return false;
-    const calc = len => { const f=(len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2]; let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i]; const r=s%11; return r<2?0:11-r; };
+    const calc = (len) => {
+      const f = (len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2];
+      let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i];
+      const r=s%11; return r<2?0:11-r;
+    };
     return calc(12)=== +d[12] && calc(13)=== +d[13];
   }
 
+  // ---------- PF/PJ ----------
   function applyTipo(){
     const isPF = document.getElementById('rPF').checked;
     document.getElementById('lblDoc').textContent = isPF ? 'CPF' : 'CNPJ';
@@ -183,12 +195,14 @@
   document.getElementById('rPF').addEventListener('change', applyTipo);
   document.getElementById('rPJ').addEventListener('change', applyTipo);
 
+  // ---------- Plano ----------
   function updateValor() {
     const plano = document.getElementById('fldPlano').value;
     document.getElementById('fldValor').value = plano.includes('Prime') ? 'R$ 2.000,00/mês' : 'R$ 1.500,00/mês';
   }
   document.getElementById('fldPlano').addEventListener('change', updateValor);
 
+  // ---------- Utils ----------
   function genDocId() {
     const d = new Date();
     const pad = n=>('0'+n).slice(-2);
@@ -196,9 +210,10 @@
   }
   function escapeHtml(str){return (str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
 
+  // ---------- Template ----------
   const INTERNAL_TEMPLATE = `
     <style>
-      .page{width:794px;height:1123px;padding:48px;box-sizing:border-box;font-family:'Open Sans',sans-serif;color:#111}
+      .page{width:794px;height:1123px;padding:48px;box-sizing:border-box;font-family:'Open Sans',sans-serif;color:#111; position:relative}
       h1{font-family:'Montserrat',sans-serif; font-size:22px; margin:0 0 12px}
       .muted{color:#666}
       .foot{position:absolute;bottom:18pt;left:48px;right:48px;font-size:11px;color:#666;display:flex;justify-content:space-between}
@@ -223,11 +238,12 @@
       const resp = await fetch('contract-fill.html', { cache: 'no-store' });
       if(!resp.ok) throw new Error('HTTP '+resp.status);
       return await resp.text();
-    }catch(e){
+    }catch(_){
       return INTERNAL_TEMPLATE;
     }
   }
 
+  // ---------- PDF ----------
   async function buildPdf(data, assinaturaPNG, isPF) {
     let tpl = await fetchTemplate();
     const now = new Date();
@@ -236,6 +252,7 @@
     const displayName = data.razao;
     const responsavel  = isPF ? data.razao : (data.resp||data.razao);
     const docGeneric   = data.doc;
+
     const pdfHtml = tpl
       .replaceAll('{{RAZAO}}', escapeHtml(displayName))
       .replaceAll('{{RESP}}', escapeHtml(responsavel))
@@ -270,6 +287,7 @@
     return { pdf, docId, dataHora };
   }
 
+  // ---------- Coleta ----------
   function collectData() {
     const isPF = document.getElementById('rPF').checked;
     const plano = document.getElementById('fldPlano').value;
@@ -281,4 +299,84 @@
       razao: document.getElementById('fldRazao').value.trim(),
       resp: document.getElementById('fldResp').value.trim(),
       email: document.getElementById('fldEmail').value.trim(),
-      fone: document
+      fone: document.getElementById('fldFone').value.trim(),
+      aceite: document.getElementById('fldAceite').checked,
+      dataBR: data.toLocaleDateString('pt-BR'),
+      valorPlano: document.getElementById('fldValor').value
+    };
+  }
+
+  // ---------- UI ----------
+  function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
+  function shootConfetti() {
+    const c = document.getElementById('confetti'); const ctx = c.getContext('2d');
+    c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
+    const pieces = Array.from({length:140}, ()=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
+    let t=0;
+    (function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; })();
+  }
+
+  // ---------- Eventos ----------
+  document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
+  document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
+
+  document.getElementById('formAssinatura').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    // 1) validação nativa
+    if (typeof form.reportValidity === 'function' && !form.reportValidity()) return;
+
+    // 2) validações custom
+    const d = collectData();
+    const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
+    if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
+    if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
+    if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
+
+    // 3) feedback de processo
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
+
+    // 4) abrir aba (reduz bloqueio) — só depois de tudo validado
+    let wa = window.open('about:blank', '_blank');
+
+    try{
+      const assinaturaPNG = sigPad.toDataURL('image/png'); // síncrono
+      const { pdf, docId, dataHora } = await buildPdf(d, assinaturaPNG, d.isPF);
+
+      const fileName = 'Contrato_' + d.razao.replace(/\s+/g,'_') + '_' + docId + '.pdf';
+      pdf.save(fileName);
+
+      const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
+      const resumo = [
+        'Proposta Help!',
+        'Plano: ' + d.plano,
+        'Valor: ' + d.valorPlano,
+        rotDoc + ': ' + d.doc,
+        'Nome/Razão: ' + d.razao,
+        (d.isPF ? null : 'Responsável: ' + (d.resp||'')),
+        'E-mail: ' + d.email,
+        'Fone: ' + d.fone,
+        'Data/Hora: ' + dataHora,
+        'ID: ' + docId
+      ].filter(Boolean).join('%0A');
+
+      const WHATSAPP_NUMBER = '5519984278886'; // ajuste
+      const waUrl = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(resumo);
+
+      if (wa) wa.location.href = waUrl; else window.location.href = waUrl;
+
+      showToast(); 
+      shootConfetti();
+    }catch(err){
+      console.error(err);
+      alert('Não foi possível gerar o PDF. Veja o console.');
+      if (wa && !wa.closed) wa.close(); // evita aba em branco
+    }finally{
+      btn.disabled = false; btn.textContent = originalText;
+    }
+  });
+</script>
+</body>
+</html>
