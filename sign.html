@@ -46,12 +46,13 @@
 
 <main class="container">
   <form class="grid" id="formAssinatura" novalidate>
+    <!-- Tipo de Pessoa -->
     <div class="full">
       <label>Tipo de contratante</label>
       <div class="inline">
         <label><input type="radio" name="tipo" value="PF" id="rPF" checked> Pessoa Física (CPF)</label>
         <label><input type="radio" name="tipo" value="PJ" id="rPJ"> Pessoa Jurídica (CNPJ)</label>
-        <span class="muted">• Campos ajustam automaticamente</span>
+        <span class="muted" id="hintTipo">• Campos ajustam automaticamente</span>
       </div>
     </div>
 
@@ -67,16 +68,19 @@
       <input id="fldValor" value="R$ 2.000,00/mês" readonly />
     </div>
 
+    <!-- Documento -->
     <div>
       <label id="lblDoc">CPF</label>
       <input id="fldDoc" required placeholder="000.000.000-00" autocomplete="off"/>
     </div>
 
+    <!-- Nome / Razão -->
     <div class="full">
       <label id="lblRazao">Nome completo</label>
       <input id="fldRazao" required placeholder="Seu nome completo" autocomplete="name"/>
     </div>
 
+    <!-- Responsável (apenas PJ) -->
     <div id="grpResp" style="display:none">
       <label id="lblResp">Responsável</label>
       <input id="fldResp" placeholder="Nome do responsável legal"/>
@@ -91,6 +95,7 @@
       <input id="fldFone" required placeholder="(00) 00000-0000" autocomplete="tel" />
     </div>
 
+    <!-- Assinatura -->
     <div class="full card">
       <label>Assinatura (desenhe abaixo)</label>
       <canvas id="sigCanvas"></canvas>
@@ -112,6 +117,7 @@
 <canvas class="confetti" id="confetti"></canvas>
 
 <script>
+  // libs
   const { jsPDF } = window.jspdf;
   let sigPad;
   let LAST_PDF_URL = null;
@@ -230,18 +236,13 @@
 
   async function fetchTemplate(){
     try{
-      // **IMPORTANTE**: usar o template próprio de PDF, sem imagens externas
-      const resp = await fetch('contract-fill.html', { cache: 'no-store' });
+      // Busca o contrato de leitura real
+      const resp = await fetch('contract.html', { cache: 'no-store' });
       if(!resp.ok) throw new Error('HTTP '+resp.status);
-      let html = await resp.text();
-
-      // Sanitiza o template (evita CORS/tintas e scripts indesejados)
-      html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
-      html = html.replace(/<img\b[^>]*>/gi, ''); // se algum dia incluirem imagens remotas
-
-      return html;
+      return await resp.text();
     }catch(_){
-      return INTERNAL_TEMPLATE; // fallback offline
+      // Fallback mínimo se o arquivo não existir
+      return INTERNAL_TEMPLATE;
     }
   }
 
@@ -277,7 +278,7 @@
     holder.innerHTML = pdfHtml;
     document.body.appendChild(holder);
 
-    // Garante páginas
+    // se o contrato não tiver .page, criamos uma
     let nodes = holder.querySelectorAll('.page');
     if (!nodes.length) {
       const wrap = document.createElement('div');
@@ -294,7 +295,7 @@
       nodes = [wrap];
     }
 
-    // CORS amigo nas imgs locais/in-line (se existirem)
+    // ajuda com imagens externas
     holder.querySelectorAll('img').forEach(img => { img.setAttribute('crossorigin','anonymous'); });
 
     const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
@@ -309,25 +310,6 @@
     return { pdf, docId, dataHora };
   }
 
-  // ---------- Coleta ----------
-  function collectData() {
-    const isPF = document.getElementById('rPF').checked;
-    const plano = document.getElementById('fldPlano').value;
-    const data = new Date();
-    return {
-      isPF,
-      plano,
-      doc: document.getElementById('fldDoc').value.trim(),
-      razao: document.getElementById('fldRazao').value.trim(),
-      resp: document.getElementById('fldResp').value.trim(),
-      email: document.getElementById('fldEmail').value.trim(),
-      fone: document.getElementById('fldFone').value.trim(),
-      aceite: document.getElementById('fldAceite').checked,
-      dataBR: data.toLocaleDateString('pt-BR'),
-      valorPlano: document.getElementById('fldValor').value
-    };
-  }
-
   // ---------- UI ----------
   function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
   function shootConfetti() {
@@ -335,25 +317,30 @@
     c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
     const pieces = Array.from({length:140}, ()=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
     let t=0;
-    (function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; })();
+    (function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; })();
   }
 
   // ---------- Eventos ----------
   document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
   document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
 
+  // >>> Removido o pagehide que revogava o blob (causava PDF em branco)
+
   document.getElementById('formAssinatura').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const form = e.currentTarget;
 
+    // 1) validação nativa
     if (typeof form.reportValidity === 'function' && !form.reportValidity()) return;
 
+    // 2) validações custom
     const d = collectData();
     const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
     if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
     if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
     if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
 
+    // 3) feedback
     const btn = document.getElementById('btnSubmit');
     if (btn.disabled) return;
     btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
@@ -361,28 +348,44 @@
     try{
       const assinaturaPNG = sigPad.toDataURL('image/png');
       const { pdf, docId } = await buildPdf(d, assinaturaPNG, d.isPF);
+
       pdf.setProperties({ title: 'Contrato ' + d.razao + ' - ' + docId, subject: 'Contrato Help!', author: 'Help!' });
 
       const arrayBuffer = await pdf.output('arraybuffer');
       const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
 
+      // Revoga URL anterior se existir
       if (LAST_PDF_URL) { URL.revokeObjectURL(LAST_PDF_URL); LAST_PDF_URL = null; }
       const pdfUrl = URL.createObjectURL(blob);
       LAST_PDF_URL = pdfUrl;
 
-      showToast(); shootConfetti();
+      showToast();
+      shootConfetti();
 
       const fileName = `Contrato-${docId}.pdf`;
       const file = new File([blob], fileName, { type: 'application/pdf' });
 
+      // Tenta compartilhar (Android/Chrome)
       let shared = false;
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ title: 'Contrato Help!', text: `Segue o contrato ${docId}`, files: [file] }); shared = true; } catch(_) {}
+        try {
+          await navigator.share({ title: 'Contrato Help!', text: `Segue o contrato ${docId}`, files: [file] });
+          shared = true;
+        } catch (_) { /* usuário cancelou */ }
       }
+
       if (!shared) {
+        // Abre em nova aba; se bloqueado, força download
         const w = window.open(pdfUrl, '_blank', 'noopener');
-        if (!w) pdf.save(fileName);
+        if (!w) {
+          pdf.save(fileName);
+        } else {
+          // opcional: abrir mensagem no WhatsApp (sem anexo automático)
+          // const msg = encodeURIComponent(`Olá! Segue o contrato ${docId} do plano ${d.plano}. O PDF abriu em outra aba para você baixar e anexar aqui.`);
+          // window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener');
+        }
       }
+
     }catch(err){
       console.error(err);
       alert('Não foi possível gerar/compartilhar o PDF. Veja o console.');
