@@ -2,160 +2,397 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Assinatura do Contrato | Help!</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Nada de CSS novo aqui. Mantive apenas o HTML simples; se você já tem um CSS,
-       ele continuará funcionando se estiver referenciado no <head>. -->
-  <!-- Exemplo (opcional, mantenha se você já tinha): -->
-  <!-- <link rel="stylesheet" href="./styles.css"> -->
-
-  <!-- Carrego bibliotecas SÓ para garantir funcionalidade. Não alteram layout. -->
-  <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"></script>
+  <title>Assinatura do Contrato | Help!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --brand:#FFC107; --dark:#000; --light:#fff; --muted:#666; --border:#e5e5e5; --radius:14px; }
+    *{box-sizing:border-box}
+    body{margin:0;font:500 16px/1.6 'Open Sans',ui-sans-serif;color:#111;background:#fff}
+    header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);z-index:10}
+    .container{max-width:900px;margin:0 auto;padding:16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:30px;height:30px;border-radius:8px;object-fit:cover}
+    .grid{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+    .full{grid-column:1/-1}
+    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border)}
+    label{font-size:13px;color:#444}
+    .card{border:1px solid var(--border);padding:16px;border-radius:var(--radius)}
+    .btn{border:0;background:linear-gradient(180deg,#FFD54F,#FFC107);color:#000;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-family:'Montserrat',sans-serif;box-shadow:0 6px 18px rgba(255,193,7,.25)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    canvas{display:block;width:100%;height:160px;background:#f8f8f8;border:1px dashed #ccc;border-radius:10px}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.3s}
+    .toast.show{opacity:1;transform:none}
+    .confetti{position:fixed;inset:0;pointer-events:none;display:none}
+    .inline{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .muted{color:#666}
+    @media (max-width:860px){ .grid{grid-template-columns:1fr} }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Help! – Assinatura</h1>
-      <p>Preencha seus dados e assine abaixo</p>
-      <!-- Importante: link RELATIVO para funcionar no GitHub Pages -->
-      <p><a href="./contract.html">Ler Contrato</a></p>
-    </header>
+<header>
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div class="brand">
+      <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!">
+      <div><strong style="font-family:'Montserrat',sans-serif">Help! – Assinatura</strong><div style="font-size:12px;color:#666">Preencha seus dados e assine abaixo</div></div>
+    </div>
+    <button class="btn" type="button" onclick="location.href='contract.html'">Ler Contrato</button>
+  </div>
+</header>
 
-    <!-- Tipo de contratante -->
-    <section aria-labelledby="tipo">
-      <h2 id="tipo" style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;">Tipo de contratante</h2>
-      <p><strong>Tipo de contratante</strong></p>
-      <label><input type="radio" name="tipo" value="PF" checked> Pessoa Física (CPF)</label>
-      <label><input type="radio" name="tipo" value="PJ"> Pessoa Jurídica (CNPJ)</label>
-      <small>• Campos ajustam automaticamente</small>
-    </section>
-
-    <form id="form">
-      <p>
-        <label for="plano">Plano</label><br />
-        <select id="plano" name="plano" required>
-          <option value="Help! Start">Help! Start</option>
-          <option value="Help! Prime">Help! Prime</option>
-        </select>
-      </p>
-
-      <p>
-        <label for="valor">Valor</label><br />
-        <input id="valor" name="valor" placeholder="R$ 0,00" />
-      </p>
-
-      <!-- PF -->
-      <div id="secPF">
-        <p>
-          <label for="cpf">CPF</label><br />
-          <input id="cpf" name="cpf" inputmode="numeric" placeholder="000.000.000-00" />
-        </p>
-        <p>
-          <label for="nome">Nome completo</label><br />
-          <input id="nome" name="nome" placeholder="Seu nome" />
-        </p>
+<main class="container">
+  <form class="grid" id="formAssinatura" novalidate>
+    <!-- Tipo de Pessoa -->
+    <div class="full">
+      <label>Tipo de contratante</label>
+      <div class="inline">
+        <label><input type="radio" name="tipo" value="PF" id="rPF" checked> Pessoa Física (CPF)</label>
+        <label><input type="radio" name="tipo" value="PJ" id="rPJ"> Pessoa Jurídica (CNPJ)</label>
+        <span class="muted" id="hintTipo">• Campos ajustam automaticamente</span>
       </div>
+    </div>
 
-      <!-- PJ -->
-      <div id="secPJ" style="display:none">
-        <p>
-          <label for="cnpj">CNPJ</label><br />
-          <input id="cnpj" name="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" />
-        </p>
-        <p>
-          <label for="razao">Razão Social</label><br />
-          <input id="razao" name="razao" placeholder="SUA EMPRESA LTDA" />
-        </p>
+    <div>
+      <label>Plano</label>
+      <select id="fldPlano">
+        <option>Help! Start</option>
+        <option selected>Help! Prime</option>
+      </select>
+    </div>
+    <div>
+      <label>Valor</label>
+      <input id="fldValor" value="R$ 2.000,00/mês" readonly />
+    </div>
+
+    <!-- Documento -->
+    <div>
+      <label id="lblDoc">CPF</label>
+      <input id="fldDoc" required placeholder="000.000.000-00" autocomplete="off"/>
+    </div>
+
+    <!-- Nome / Razão -->
+    <div class="full">
+      <label id="lblRazao">Nome completo</label>
+      <input id="fldRazao" required placeholder="Seu nome completo" autocomplete="name"/>
+    </div>
+
+    <!-- Responsável (apenas PJ) -->
+    <div id="grpResp" style="display:none">
+      <label id="lblResp">Responsável</label>
+      <input id="fldResp" placeholder="Nome do responsável legal"/>
+    </div>
+
+    <div>
+      <label>E-mail</label>
+      <input id="fldEmail" type="email" required placeholder="contato@empresa.com" autocomplete="email"/>
+    </div>
+    <div class="full">
+      <label>Telefone/WhatsApp</label>
+      <input id="fldFone" required placeholder="(00) 00000-0000" autocomplete="tel" />
+    </div>
+
+    <!-- Assinatura -->
+    <div class="full card">
+      <label>Assinatura (desenhe abaixo)</label>
+      <canvas id="sigCanvas"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn" type="button" id="btnLimpar">Limpar Assinatura</button>
       </div>
+    </div>
 
-      <p>
-        <label for="responsavel">Responsável</label><br />
-        <input id="responsavel" name="responsavel" placeholder="Nome do responsável" required />
-      </p>
+    <div class="full">
+      <label><input type="checkbox" id="fldAceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
+    </div>
+    <div class="full actions">
+      <button type="submit" class="btn" id="btnSubmit">Gerar PDF + WhatsApp</button>
+    </div>
+  </form>
+</main>
 
-      <p>
-        <label for="email">E-mail</label><br />
-        <input id="email" name="email" type="email" placeholder="email@dominio.com" required />
-      </p>
+<div class="toast" id="toast">PDF gerado. Encaminhe pelo WhatsApp no compartilhamento do navegador.</div>
+<canvas class="confetti" id="confetti"></canvas>
 
-      <p>
-        <label for="telefone">Telefone/WhatsApp</label><br />
-        <input id="telefone" name="telefone" inputmode="tel" placeholder="(DDD) 90000-0000" required />
-      </p>
+<script>
+  // libs
+  const { jsPDF } = window.jspdf;
+  let sigPad;
+  let LAST_PDF_URL = null;
 
-      <p>
-        <label for="assinaturaCanvas">Assinatura (desenhe abaixo)</label><br />
-        <canvas id="assinaturaCanvas" height="160" style="border:1px dashed #999; width:100%; max-width:600px; background:#fff"></canvas><br />
-        <button type="button" id="limparAssinatura">Limpar Assinatura</button>
-      </p>
-
-      <p>
-        <label><input type="checkbox" id="aceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
-      </p>
-
-      <p>
-        <button id="gerarPdfBtn" type="button">Gerar PDF + WhatsApp</button>
-      </p>
-      <div id="wa-fallback"></div>
-    </form>
-  </main>
-
-  <!-- Apenas JS. Não altera visual; só faz o botão funcionar. -->
-  <script>
-  (function(){
-    // ===== Helpers =====
-    const $ = (s, c=document) => c.querySelector(s);
-    const onlyDigits = s => String(s||'').replace(/\D+/g,'');
-    const slug = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/(^-|-$)/g,'').toLowerCase();
-    const hojeISO = () => new Date().toISOString().slice(0,10);
-    const dataHoraBR = () => new Date().toLocaleString('pt-BR');
-
-    // ===== PF/PJ Toggle (sem impacto visual, só exibe/esconde grupos) =====
-    const radiosTipo = document.querySelectorAll('input[name="tipo"]');
-    const secPF = $('#secPF'), secPJ = $('#secPJ'), cpf = $('#cpf'), nome = $('#nome'), cnpj = $('#cnpj'), razao = $('#razao');
-    function toggleTipo(){
-      const isPJ = (document.querySelector('input[name="tipo"]:checked')?.value || 'PF') === 'PJ';
-      secPF.style.display = isPJ ? 'none' : '';
-      secPJ.style.display = isPJ ? '' : 'none';
-      if (cpf) cpf.required = !isPJ;
-      if (nome) nome.required = !isPJ;
-      if (cnpj) cnpj.required = isPJ;
-      if (razao) razao.required = isPJ;
+  // ---------- Assinatura ----------
+  function initSigPad() {
+    const c = document.getElementById('sigCanvas');
+    const rect = c.getBoundingClientRect();
+    const prev = sigPad && !sigPad.isEmpty() ? sigPad.toData() : null;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    c.width = Math.floor(rect.width * ratio);
+    c.height = Math.floor(160 * ratio);
+    c.style.width = rect.width + 'px';
+    c.style.height = '160px';
+    const ctx = c.getContext('2d');
+    ctx.scale(ratio, ratio);
+    if (sigPad && sigPad.off) sigPad.off();
+    if (typeof SignaturePad !== 'function') {
+      alert('Biblioteca de assinatura não carregou. Verifique sua conexão.');
+      return;
     }
-    radiosTipo.forEach(r=>r.addEventListener('change', toggleTipo));
-    toggleTipo();
+    sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor:'#000' });
+    if (prev) { try { sigPad.fromData(prev); } catch(_){} }
+  }
+  window.addEventListener('load', ()=>{ initSigPad(); applyTipo(); updateValor(); });
+  let resizeTimer; window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(initSigPad,150); });
+  document.getElementById('btnLimpar').addEventListener('click', ()=> sigPad && sigPad.clear());
 
-    // ===== SignaturePad (sem mudar layout) =====
-    const canvas = $('#assinaturaCanvas');
-    let pad = null;
-    if (window.SignaturePad && canvas) {
-      pad = new window.SignaturePad(canvas, { backgroundColor: '#fff' });
-      const resize = () => {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        const wasEmpty = pad.isEmpty();
-        canvas.width = canvas.clientWidth * ratio;
-        canvas.height = canvas.clientHeight * ratio;
-        const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
-        if (wasEmpty) pad.clear();
-      };
-      window.addEventListener('resize', resize); resize();
-      $('#limparAssinatura').addEventListener('click', ()=> pad && pad.clear());
+  // ---------- Máscaras/validações ----------
+  const getDigits = s => (s||'').toString().replace(/\D+/g,'');
+  function maskPhone(i) {
+    let v = getDigits(i.value).slice(0,11);
+    i.value = v.length<=10
+      ? v.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (_,$1,$2,$3)=> {
+          let out=''; if($1) out += `(${ $1 }` + ($1.length===2?') ':'' );
+          if($2) out += $2; if($3) out += `-${$3}`; return out;
+        })
+      : v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+  function maskCPF(d){ return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
+  function maskCNPJ(d){ return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); }
+  function maskDoc(i){
+    const isPF = document.getElementById('rPF').checked;
+    let d = getDigits(i.value);
+    d = isPF ? d.slice(0,11) : d.slice(0,14);
+    i.value = d ? (isPF ? maskCPF(d) : maskCNPJ(d)) : '';
+  }
+  function vCPF(v){
+    const d=getDigits(v); if(d.length!==11 || /^(\d)\1{10}$/.test(d)) return false;
+    let s=0; for(let i=0;i<9;i++) s+= +d[i]*(10-i);
+    let r=(s*10)%11; if(r===10) r=0; if(r!== +d[9]) return false;
+    s=0; for(let i=0;i<10;i++) s+= +d[i]*(11-i);
+    r=(s*10)%11; if(r===10) r=0; return r=== +d[10];
+  }
+  function vCNPJ(v){
+    const d=getDigits(v); if(d.length!==14 || /^(\d)\1{13}$/.test(d)) return false;
+    const calc = (len) => {
+      const f = (len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2];
+      let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i];
+      const r=s%11; return r<2?0:11-r;
+    };
+    return calc(12)=== +d[12] && calc(13)=== +d[13];
+  }
+
+  // ---------- PF/PJ ----------
+  function applyTipo(){
+    const isPF = document.getElementById('rPF').checked;
+    document.getElementById('lblDoc').textContent = isPF ? 'CPF' : 'CNPJ';
+    document.getElementById('fldDoc').placeholder = isPF ? '000.000.000-00' : '00.000.000/0000-00';
+    document.getElementById('lblRazao').textContent = isPF ? 'Nome completo' : 'Razão Social';
+    document.getElementById('fldRazao').placeholder = isPF ? 'Seu nome completo' : 'Nome da Empresa LTDA';
+    document.getElementById('grpResp').style.display = isPF ? 'none' : 'block';
+    document.getElementById('fldResp').required = !isPF;
+    document.getElementById('fldDoc').value = '';
+  }
+  document.getElementById('rPF').addEventListener('change', applyTipo);
+  document.getElementById('rPJ').addEventListener('change', applyTipo);
+
+  // ---------- Plano ----------
+  function updateValor() {
+    const plano = document.getElementById('fldPlano').value;
+    document.getElementById('fldValor').value = plano.includes('Prime') ? 'R$ 2.000,00/mês' : 'R$ 1.500,00/mês';
+  }
+  document.getElementById('fldPlano').addEventListener('change', updateValor);
+
+  // ---------- Utils ----------
+  function genDocId() {
+    const d = new Date();
+    const pad = n=>('0'+n).slice(-2);
+    return 'HELP-' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + Math.floor(Math.random()*9000+1000);
+  }
+  function escapeHtml(str){return (str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+
+  // ---------- Template ----------
+  const INTERNAL_TEMPLATE = `
+    <style>
+      .page{width:794px;height:1123px;padding:48px;box-sizing:border-box;font-family:'Open Sans',sans-serif;color:#111; position:relative}
+      h1{font-family:'Montserrat',sans-serif; font-size:22px; margin:0 0 12px}
+      .muted{color:#666}
+      .foot{position:absolute;bottom:18pt;left:48px;right:48px;font-size:11px;color:#666;display:flex;justify-content:space-between}
+      .foot .id{font-weight:600}
+    </style>
+    <div class="page">
+      <h1>Contrato Help! – {{PLANO}}</h1>
+      <p class="muted">ID: {{DOCID}} • {{DATETIME}}</p>
+      <p><strong>Contratante:</strong> {{RAZAO}} ({{PESSOA_TIPO}}) • CPF/CNPJ {{DOC_ID}}</p>
+      <p><strong>E-mail:</strong> {{EMAIL}} • <strong>Fone:</strong> {{FONE}}</p>
+      <p><strong>Valor:</strong> {{VALOR}} • Data: {{DATA}}</p>
+      <div style="margin-top:18px"><strong>Assinatura:</strong><br>{{ASSINATURA}}</div>
+      <div class="foot">
+        <div class="id">ID: {{DOCID}}</div>
+        <div>{{RAZAO}} • {{DATETIME}}</div>
+        <div>Página 1/1</div>
+      </div>
+    </div>`;
+
+  async function fetchTemplate(){
+    try{
+      // Busca o contrato de leitura real
+      const resp = await fetch('contract.html', { cache: 'no-store' });
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      return await resp.text();
+    }catch(_){
+      // Fallback mínimo se o arquivo não existir
+      return INTERNAL_TEMPLATE;
     }
+  }
 
-    // ===== Montagem do contrato (off-screen) =====
-    function montarContrato(dados, assinaturaDataURL){
+  // ---------- PDF ----------
+  async function buildPdf(data, assinaturaPNG, isPF) {
+    let tpl = await fetchTemplate();
+    const now = new Date();
+    const dataHora = now.toLocaleString('pt-BR');
+    const docId = genDocId();
+    const displayName = data.razao;
+    const responsavel  = isPF ? data.razao : (data.resp||data.razao);
+    const docGeneric   = data.doc;
+
+    const pdfHtml = tpl
+      .replaceAll('{{RAZAO}}', escapeHtml(displayName))
+      .replaceAll('{{RESP}}', escapeHtml(responsavel))
+      .replaceAll('{{EMAIL}}', escapeHtml(data.email))
+      .replaceAll('{{FONE}}', escapeHtml(data.fone))
+      .replaceAll('{{PLANO}}', escapeHtml(data.plano))
+      .replaceAll('{{VALOR}}', data.valorPlano)
+      .replaceAll('{{DATA}}', escapeHtml(data.dataBR))
+      .replaceAll('{{DATETIME}}', escapeHtml(dataHora))
+      .replaceAll('{{DOCID}}', escapeHtml(docId))
+      .replaceAll('{{PESSOA_TIPO}}', isPF ? 'Pessoa Física' : 'Pessoa Jurídica')
+      .replaceAll('{{CNPJ}}', escapeHtml(docGeneric))
+      .replaceAll('{{CPF}}',  escapeHtml(docGeneric))
+      .replaceAll('{{DOC_ID}}',escapeHtml(docGeneric))
+      .replaceAll('{{ASSINATURA}}', '<img src="' + assinaturaPNG + '" alt="Assinatura" style="height:80px">');
+
+    const holder = document.createElement('div');
+    holder.style.position = 'fixed'; holder.style.left='-200vw'; holder.style.top='0';
+    holder.style.width='794px';
+    holder.innerHTML = pdfHtml;
+    document.body.appendChild(holder);
+
+    // se o contrato não tiver .page, criamos uma
+    let nodes = holder.querySelectorAll('.page');
+    if (!nodes.length) {
       const wrap = document.createElement('div');
-      wrap.style.position = 'fixed';
-      wrap.style.left = '-99999px';
-      wrap.style.top = '0';
-      wrap.style.pointerEvents = 'none';
-      wrap.innerHTML = `
-        <div id="contrato" style="font-family:Arial, Helvetica, sans-serif; color:#111; padding:24px; width:794px; background:#fff;">
-          <h2 style="margin:0 0 8px">Contrato – ${dados.plano || '-'}</h2>
-          <p style="margin:0 0 16px; color:#444">Data: ${hojeISO()}</p>
+      wrap.className = 'page';
+      wrap.style.width = '794px';
+      wrap.style.height = '1123px';
+      wrap.style.padding = '48px';
+      wrap.style.boxSizing = 'border-box';
+      wrap.style.fontFamily = "'Open Sans', sans-serif";
+      wrap.style.color = '#111';
+      wrap.innerHTML = holder.innerHTML;
+      holder.innerHTML = '';
+      holder.appendChild(wrap);
+      nodes = [wrap];
+    }
 
-          <h3 style="margin:20px 0 8px">Dados do Contratante</h3>
-          <table style="width:100%; border-collapse:collapse; font-size:14px">
-            <tr><td style="padding:6px;border:1px solid #ddd">Tipo</td><td style="padding:6px;border:1px solid #ddd">${dados.tipo}</td></tr>
-            <tr><td style="padding:6px;border:1px solid #dd
+    // ajuda com imagens externas
+    holder.querySelectorAll('img').forEach(img => { img.setAttribute('crossorigin','anonymous'); });
+
+    const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
+
+    for(let i=0;i<nodes.length;i++) {
+      const canvas = await html2canvas(nodes[i], { scale:2, backgroundColor:'#ffffff', useCORS:true, imageTimeout:0 });
+      const img = canvas.toDataURL('image/png');
+      pdf.addImage(img, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+      if(i < nodes.length-1) pdf.addPage();
+    }
+    document.body.removeChild(holder);
+    return { pdf, docId, dataHora };
+  }
+
+  // ---------- UI ----------
+  function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
+  function shootConfetti() {
+    const c = document.getElementById('confetti'); const ctx = c.getContext('2d');
+    c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
+    const pieces = Array.from({length:140}, ()=>({x:Math.random()*c.width,y:-20, r: 4+Math.random()*6, vy: 2+Math.random()*3, vx:(Math.random()-.5)*2, a: Math.random()*Math.PI}));
+    let t=0;
+    (function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; })();
+  }
+
+  // ---------- Eventos ----------
+  document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
+  document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
+
+  // >>> Removido o pagehide que revogava o blob (causava PDF em branco)
+
+  document.getElementById('formAssinatura').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    // 1) validação nativa
+    if (typeof form.reportValidity === 'function' && !form.reportValidity()) return;
+
+    // 2) validações custom
+    const d = collectData();
+    const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
+    if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
+    if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
+    if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
+
+    // 3) feedback
+    const btn = document.getElementById('btnSubmit');
+    if (btn.disabled) return;
+    btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
+
+    try{
+      const assinaturaPNG = sigPad.toDataURL('image/png');
+      const { pdf, docId } = await buildPdf(d, assinaturaPNG, d.isPF);
+
+      pdf.setProperties({ title: 'Contrato ' + d.razao + ' - ' + docId, subject: 'Contrato Help!', author: 'Help!' });
+
+      const arrayBuffer = await pdf.output('arraybuffer');
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+
+      // Revoga URL anterior se existir
+      if (LAST_PDF_URL) { URL.revokeObjectURL(LAST_PDF_URL); LAST_PDF_URL = null; }
+      const pdfUrl = URL.createObjectURL(blob);
+      LAST_PDF_URL = pdfUrl;
+
+      showToast();
+      shootConfetti();
+
+      const fileName = `Contrato-${docId}.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      // Tenta compartilhar (Android/Chrome)
+      let shared = false;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ title: 'Contrato Help!', text: `Segue o contrato ${docId}`, files: [file] });
+          shared = true;
+        } catch (_) { /* usuário cancelou */ }
+      }
+
+      if (!shared) {
+        // Abre em nova aba; se bloqueado, força download
+        const w = window.open(pdfUrl, '_blank', 'noopener');
+        if (!w) {
+          pdf.save(fileName);
+        } else {
+          // opcional: abrir mensagem no WhatsApp (sem anexo automático)
+          // const msg = encodeURIComponent(`Olá! Segue o contrato ${docId} do plano ${d.plano}. O PDF abriu em outra aba para você baixar e anexar aqui.`);
+          // window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener');
+        }
+      }
+
+    }catch(err){
+      console.error(err);
+      alert('Não foi possível gerar/compartilhar o PDF. Veja o console.');
+    }finally{
+      btn.disabled = false; btn.textContent = originalText;
+    }
+  });
+</script>
+</body>
+</html>
