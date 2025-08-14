@@ -236,12 +236,10 @@
 
   async function fetchTemplate(){
     try{
-      // Busca o contrato de leitura real
       const resp = await fetch('contract.html', { cache: 'no-store' });
       if(!resp.ok) throw new Error('HTTP '+resp.status);
       return await resp.text();
     }catch(_){
-      // Fallback mínimo se o arquivo não existir
       return INTERNAL_TEMPLATE;
     }
   }
@@ -278,7 +276,6 @@
     holder.innerHTML = pdfHtml;
     document.body.appendChild(holder);
 
-    // se o contrato não tiver .page, criamos uma
     let nodes = holder.querySelectorAll('.page');
     if (!nodes.length) {
       const wrap = document.createElement('div');
@@ -295,7 +292,6 @@
       nodes = [wrap];
     }
 
-    // ajuda com imagens externas
     holder.querySelectorAll('img').forEach(img => { img.setAttribute('crossorigin','anonymous'); });
 
     const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
@@ -320,6 +316,21 @@
     (function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; })();
   }
 
+  // ---------- Coleta ----------
+  function collectData(){
+    const isPF = document.getElementById('rPF').checked;
+    const plano = document.getElementById('fldPlano').value;
+    const valorPlano = document.getElementById('fldValor').value;
+    const razao = document.getElementById('fldRazao').value.trim();
+    const doc = document.getElementById('fldDoc').value.trim();
+    const email = document.getElementById('fldEmail').value.trim();
+    const fone = document.getElementById('fldFone').value.trim();
+    const resp = document.getElementById('fldResp')?.value.trim();
+    const d = new Date(); const pad=n=>('0'+n).slice(-2);
+    const dataBR = `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+    return { isPF, plano, valorPlano, razao, doc, email, fone, resp, dataBR };
+  }
+
   // ---------- Eventos ----------
   document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
   document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
@@ -333,17 +344,20 @@
     // 1) validação nativa
     if (typeof form.reportValidity === 'function' && !form.reportValidity()) return;
 
-    // 2) validações custom
     const d = collectData();
     const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
     if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
     if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
     if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
 
-    // 3) feedback
+    // 2) feedback
     const btn = document.getElementById('btnSubmit');
     if (btn.disabled) return;
     btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
+
+    // 3) PREVIEW WINDOW: abre a aba logo no clique para não ser bloqueada
+    //    Vamos tentar compartilhar primeiro; se não rolar, usamos a aba já aberta.
+    const previewWin = window.open('', '_blank', 'noopener');
 
     try{
       const assinaturaPNG = sigPad.toDataURL('image/png');
@@ -354,7 +368,6 @@
       const arrayBuffer = await pdf.output('arraybuffer');
       const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
 
-      // Revoga URL anterior se existir
       if (LAST_PDF_URL) { URL.revokeObjectURL(LAST_PDF_URL); LAST_PDF_URL = null; }
       const pdfUrl = URL.createObjectURL(blob);
       LAST_PDF_URL = pdfUrl;
@@ -374,21 +387,28 @@
         } catch (_) { /* usuário cancelou */ }
       }
 
+      // Usa a aba já aberta ou fallback
       if (!shared) {
-        // Abre em nova aba; se bloqueado, força download
-        const w = window.open(pdfUrl, '_blank', 'noopener');
-        if (!w) {
-          pdf.save(fileName);
+        if (previewWin && !previewWin.closed) {
+          try {
+            previewWin.location.href = pdfUrl; // não bloqueia pois a aba já está aberta
+          } catch(_) {
+            // se der erro, força download
+            const link = document.createElement('a');
+            link.href = pdfUrl; link.download = fileName; link.click();
+          }
         } else {
-          // opcional: abrir mensagem no WhatsApp (sem anexo automático)
-          // const msg = encodeURIComponent(`Olá! Segue o contrato ${docId} do plano ${d.plano}. O PDF abriu em outra aba para você baixar e anexar aqui.`);
-          // window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener');
+          // sem preview aberto (bloqueado pelo navegador), força download
+          const link = document.createElement('a');
+          link.href = pdfUrl; link.download = fileName; link.click();
         }
       }
 
     }catch(err){
       console.error(err);
       alert('Não foi possível gerar/compartilhar o PDF. Veja o console.');
+      // se abrimos uma aba e falhou, fecha para não deixar lixo
+      try { if (previewWin && !previewWin.closed) previewWin.close(); } catch(_){}
     }finally{
       btn.disabled = false; btn.textContent = originalText;
     }
