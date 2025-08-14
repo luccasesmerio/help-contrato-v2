@@ -2,158 +2,51 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Contrato Preenchido – Help!</title>
+  <title>Contrato de Prestação de Serviços | Help!</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body{margin:0;background:#fff;font:500 12px/1.45 'Open Sans',ui-sans-serif,system-ui;color:#111}
-    .page{width:595pt; height:842pt; padding:40pt 44pt; box-sizing:border-box; position:relative;}
-    h1{font-size:18px;margin:0 0 8px;font-family:'Montserrat',sans-serif}
-    h2{font-size:14px;margin:16px 0 8px;font-family:'Montserrat',sans-serif}
-    .muted{color:#555} .mb{margin-bottom:10px}
-    .table{width:100%;border-collapse:collapse}
-    .table td,.table th{border:1px solid #ddd;padding:6px 8px;text-align:left}
-    .sign{display:flex;gap:28px;margin-top:24px}
-    .sign .box{flex:1} .hr{border-top:1px solid #aaa;margin-top:40px}
-    .foot{position:absolute;bottom:18pt;left:44pt;right:44pt;font-size:9px;color:#666;display:flex;justify-content:space-between}
-    .foot .id{font-weight:600}
-    .opt{display:inline} .hidden{display:none}
-    .invalid{color:#b00020; text-decoration: underline dotted;}
+    :root{ --border:#e5e5e5; --muted:#666; }
+    body{margin:0;background:#fff;color:#111;font:400 14px/1.6 'Open Sans',sans-serif}
+    .page{width:794px;height:1123px;box-sizing:border-box;padding:48px;margin:0 auto;position:relative}
+    h1,h2{font-family:'Montserrat',sans-serif;margin:0 0 12px}
+    h1{font-size:22px}
+    .muted{color:var(--muted)}
+    .sep{height:1px;background:var(--border);margin:12px 0 16px}
+    .foot{position:absolute;left:48px;right:48px;bottom:18pt;font-size:11px;color:#666;display:flex;justify-content:space-between}
+    ul{margin:0 0 10px 18px}
+    p{margin:0 0 10px}
   </style>
 </head>
 <body>
-
-  <!-- Página 1 -->
   <div class="page">
-    <h1>Contrato de Prestação de Serviços de Marketing Digital</h1>
-    <p class="muted mb">Data: <span>{{DATA}}</span></p>
+    <h1>Contrato Help! – {{PLANO}}</h1>
+    <div class="muted">ID: {{DOCID}} • Gerado em {{DATETIME}}</div>
+    <div class="sep"></div>
 
-    <h2>1. Partes</h2>
-    <p>
-      <strong>Contratante:</strong>
-      {{RAZAO}}
-      ({{PESSOA_TIPO}}),
-      CPF/CNPJ {{DOC_ID}},
-      e-mail {{EMAIL}},
-      telefone {{FONE}}.
-      <span class="opt"> Representado por {{RESP}} (se aplicável).</span>
-    </p>
-    <p><strong>Contratada:</strong> HELP! AGÊNCIA DE MARKETING.</p>
+    <p><strong>Contratante:</strong> {{RAZAO}} ({{PESSOA_TIPO}}) • CPF/CNPJ {{DOC_ID}}</p>
+    <p><strong>Contato:</strong> E-mail {{EMAIL}} • Telefone {{FONE}}</p>
+    <p><strong>Valor:</strong> {{VALOR}} • <strong>Data:</strong> {{DATA}}</p>
 
-    <h2>2. Natureza e Alcance</h2>
-    <p>Contrato regido pelo Código Civil. A relação é estritamente empresarial/profissional, não caracterizando relação de consumo.</p>
+    <h2>Objeto</h2>
+    <p>Prestação de serviços de marketing digital, gestão de tráfego e aquisição de clientes para o contratante.</p>
 
-    <h2>3. Objeto</h2>
-    <p>Prestação de serviços de marketing digital conforme plano escolhido (Anexo I). Reforço Estratégico opcional (Anexo II).</p>
+    <h2>Condições</h2>
+    <ul>
+      <li>Prazo: mensal, com renovação automática.</li>
+      <li>Cancelamento: aviso com 30 dias.</li>
+      <li>Entrega: relatórios e acesso às campanhas mediante solicitação.</li>
+      <li>Pagamentos: via boleto/Pix até o 5º dia útil.</li>
+    </ul>
 
-    <h2>4. Escopo e Limites</h2>
-    <p>4.1. Escopo no Anexo I.<br>
-       4.2. Criativos para tráfego: produção contínua conforme performance. Conteúdo para redes sociais (quando incluso) segue a quantidade do Anexo I.<br>
-       4.3. Itens fora do escopo via Change Request (CR).<br>
-       4.4. Verba de mídia não inclusa.</p>
-
-    <h2>5. Obrigações da Contratada</h2>
-    <p>Diligência técnica; SLA 24h úteis para resposta; confidencialidade; relatórios mensais.</p>
-
-    <h2>6. Obrigações do Contratante</h2>
-    <p>Fornecer materiais/acessos em até 48h úteis; pagamentos em dia; materiais sem violação de terceiros.</p>
+    <h2>Assinatura</h2>
+    <p>Abaixo, a assinatura eletrônica do contratante:</p>
+    <div style="min-height:90px">{{ASSINATURA}}</div>
 
     <div class="foot">
-      <div class="id">ID: {{DOCID}}</div>
-      <div>{{RAZAO}} • {{DATETIME}}</div>
-      <div>Página 1/4</div>
+      <div>Help! Agência de Marketing</div>
+      <div>{{RAZAO}} • {{DOCID}}</div>
+      <div>Página 1/1</div>
     </div>
   </div>
-
-  <!-- Página 2 -->
-  <div class="page">
-    <h2>7. Captação</h2>
-    <p>1 sessão mensal de captação de fotos/vídeos no estabelecimento, com edição básica. Custos de deslocamento fora de Itapetininga-SP definidos previamente entre as partes.</p>
-
-    <h2>8. Social Media (apenas Help! Prime)</h2>
-    <p>Gestão de Instagram: 1 post imagem + 1 post vídeo/semana (≈8/mês). Sem interação DMs/comentários; sem produção avançada; outras redes não incluídas.</p>
-
-    <h2>9. Propriedade Intelectual</h2>
-    <p>Metodologias e templates são da Contratada. Materiais finais aprovados: licença de uso não exclusiva e por prazo indeterminado, condicionada à adimplência. Arquivos editáveis/brutos não incluídos.</p>
-
-    <h2>10. Resultados e Responsabilidade</h2>
-    <p>Não há garantia de resultados específicos. Responsabilidade limitada ao valor pago nos 3 meses anteriores ao evento.</p>
-
-    <h2>11. Confidencialidade</h2>
-    <p>Sigilo por 5 anos após término.</p>
-
-    <h2>12. Conformidade e LGPD</h2>
-    <p>Contratante é Controlador; Contratada é Operadora. O Contratante declara possuir base legal para tratamento de dados. Uso indevido pelo Contratante não é responsabilidade da Contratada.</p>
-
-    <h2>13. Exclusividade e Não-Aliciamento</h2>
-    <p>Sem exclusividade salvo aditivo. Não-aliciamento por 12 meses; multa de 3 remunerações.</p>
-
-    <h2>14. Remuneração e Reajuste</h2>
-    <p>Plano contratado: <strong>{{PLANO}}</strong> — <strong>{{VALOR}}</strong>. Reajuste anual IPCA. Atrasos: multa 2% + juros 1% a.m. pro rata + correção.</p>
-
-    <div class="foot">
-      <div class="id">ID: {{DOCID}}</div>
-      <div>{{RAZAO}} • {{DATETIME}}</div>
-      <div>Página 2/4</div>
-    </div>
-  </div>
-
-  <!-- Página 3 -->
-  <div class="page">
-    <h2>15. Vigência e Rescisão</h2>
-    <p>Vigência inicial 90 dias; renovação mensal automática. Rescisão com 30 dias. Durante vigência inicial: pagamento proporcional.</p>
-
-    <h2>16. Foro</h2>
-    <p>Itapetininga-SP.</p>
-
-    <h2>Anexo I – Planos e Benefícios</h2>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr><th style="border:1px solid #ddd;padding:6px 8px;text-align:left">Benefício</th><th style="border:1px solid #ddd;padding:6px 8px;text-align:left">Help! Start</th><th style="border:1px solid #ddd;padding:6px 8px;text-align:left">Help! Prime</th></tr></thead>
-      <tbody>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Tráfego Pago (Meta Ads)</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Captação mensal (1 sessão)</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Criativos para anúncios</td><td style="border:1px solid #ddd;padding:6px 8px;">Conforme performance</td><td style="border:1px solid #ddd;padding:6px 8px;">Conforme performance</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Relatório + reunião mensal</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Gestão de Instagram</td><td style="border:1px solid #ddd;padding:6px 8px;">—</td><td style="border:1px solid #ddd;padding:6px 8px;">8/mês</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Planejamento editorial</td><td style="border:1px solid #ddd;padding:6px 8px;">—</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Integração anúncio + orgânico</td><td style="border:1px solid #ddd;padding:6px 8px;">—</td><td style="border:1px solid #ddd;padding:6px 8px;">Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Produção de conteúdo extra</td><td style="border:1px solid #ddd;padding:6px 8px;">Não Inclui</td><td style="border:1px solid #ddd;padding:6px 8px;">Não Inclui</td></tr>
-        <tr><td style="border:1px solid #ddd;padding:6px 8px;">Gestão de outras plataformas Ads</td><td style="border:1px solid #ddd;padding:6px 8px;">Não Inclui</td><td style="border:1px solid #ddd;padding:6px 8px;">Não Inclui</td></tr>
-      </tbody>
-    </table>
-
-    <div style="margin-top:18px">
-      <div><strong>Assinatura do Contratante:</strong></div>
-      {{ASSINATURA}}
-      <div class="muted">Assinado digitalmente em {{DATA}}</div>
-      <div class="muted">CPF/CNPJ do assinante: {{DOC_ID}}</div>
-    </div>
-
-    <div class="foot">
-      <div class="id">ID: {{DOCID}}</div>
-      <div>{{RAZAO}} • {{DATETIME}}</div>
-      <div>Página 3/4</div>
-    </div>
-  </div>
-
-  <!-- Página 4: Próximos passos -->
-  <div class="page">
-    <h2>Próximos Passos</h2>
-    <ol>
-      <li>Envio de briefing e acessos (em até 24h úteis).</li>
-      <li>Configuração/validação das contas de anúncio.</li>
-      <li>Agenda de captação (data sugerida em até 7 dias).</li>
-      <li>Primeira rodada de criativos e aprovação.</li>
-      <li>Go-live das campanhas e monitoramento diário inicial.</li>
-      <li>Relatório de 30 dias com plano de otimização.</li>
-    </ol>
-    <p class="muted">Dúvidas? Fale com a Help! pelo WhatsApp oficial.</p>
-
-    <div class="foot">
-      <div class="id">ID: {{DOCID}}</div>
-      <div>{{RAZAO}} • {{DATETIME}}</div>
-      <div>Página 4/4</div>
-    </div>
-  </div>
-
 </body>
 </html>
