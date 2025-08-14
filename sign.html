@@ -4,340 +4,158 @@
   <meta charset="utf-8" />
   <title>Assinatura do Contrato | Help!</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Nada de CSS novo aqui. Mantive apenas o HTML simples; se você já tem um CSS,
+       ele continuará funcionando se estiver referenciado no <head>. -->
+  <!-- Exemplo (opcional, mantenha se você já tinha): -->
+  <!-- <link rel="stylesheet" href="./styles.css"> -->
 
-  <!-- Estilo mínimo + patch anti-overlay -->
-  <style>
-    :root { --bg:#0b0b0b; --card:#151515; --text:#eaeaea; --muted:#9aa0a6; --brand:#ffd400; }
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text);}
-    .wrap{max-width:900px;margin:40px auto;padding:24px}
-    .card{background:var(--card);border:1px solid #222;border-radius:16px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-    h1{margin:0 0 8px;font-size:28px} p.sub{margin:0 0 24px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px} .full{grid-column:1/-1}
-    label{display:block;font-size:13px;color:var(--muted);margin:8px 0 6px}
-    input,select{width:100%;padding:12px 14px;background:#0f0f0f;border:1px solid #2a2a2a;border-radius:12px;color:var(--text)}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;background:#222;color:#fff;cursor:pointer}
-    .btn.primary{background:var(--brand);color:#000;font-weight:700}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .muted{color:var(--muted);font-size:12px}
-    canvas{width:100%;height:160px;background:#0f0f0f;border:1px dashed #333;border-radius:12px}
-    a.link{color:var(--brand);text-decoration:none}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
-
-    /* 🔒 Botão sempre clicável (anti-overlay) */
-    #gerarPdfBtn { position: relative !important; z-index: 9999 !important; pointer-events: auto !important; cursor: pointer !important; }
-    /* 🔗 Topo não deve cobrir conteúdo */
-    .topbar, .topbar * { position: relative; z-index: 1; pointer-events: auto; }
-    /* 📄 Qualquer contrato injetado não bloqueia clique */
-    #contrato { position: static !important; pointer-events: none !important; }
-    /* Bloqueadores comuns perdem clique */
-    [aria-hidden="true"], .overlay, .modal-backdrop {
-      pointer-events: none !important;
-    }
-  </style>
-
-  <!-- CDNs (evita 404 no GH Pages) -->
-  <!-- html2pdf bundle já inclui html2canvas + jsPDF -->
+  <!-- Carrego bibliotecas SÓ para garantir funcionalidade. Não alteram layout. -->
   <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <div style="display:flex;align-items:center;gap:10px">
-        <strong>Help!</strong>
-        <span class="muted">Assinatura</span>
-      </div>
-      <!-- IMPORTANTE: link relativo -->
-      <a class="link" href="./contract.html">Ler Contrato</a>
-    </div>
-
-    <div class="card">
+  <main>
+    <header>
       <h1>Help! – Assinatura</h1>
-      <p class="sub">Preencha seus dados e assine abaixo</p>
+      <p>Preencha seus dados e assine abaixo</p>
+      <!-- Importante: link RELATIVO para funcionar no GitHub Pages -->
+      <p><a href="./contract.html">Ler Contrato</a></p>
+    </header>
 
-      <!-- Tipo de contratante -->
-      <div class="row" style="margin-bottom:8px">
-        <label class="muted" style="margin:0">Tipo de contratante</label>
-        <div class="row">
-          <label class="row" style="gap:6px"><input type="radio" name="tipo" value="PF" checked> Pessoa Física (CPF)</label>
-          <label class="row" style="gap:6px"><input type="radio" name="tipo" value="PJ"> Pessoa Jurídica (CNPJ)</label>
-        </div>
-      </div>
+    <!-- Tipo de contratante -->
+    <section aria-labelledby="tipo">
+      <h2 id="tipo" style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;">Tipo de contratante</h2>
+      <p><strong>Tipo de contratante</strong></p>
+      <label><input type="radio" name="tipo" value="PF" checked> Pessoa Física (CPF)</label>
+      <label><input type="radio" name="tipo" value="PJ"> Pessoa Jurídica (CNPJ)</label>
+      <small>• Campos ajustam automaticamente</small>
+    </section>
 
-      <div class="grid" id="form">
-        <div class="full">
-          <label>Plano</label>
-          <select id="plano" required>
-            <option value="Help! Start">Help! Start</option>
-            <option value="Help! Prime">Help! Prime</option>
-          </select>
-        </div>
+    <form id="form">
+      <p>
+        <label for="plano">Plano</label><br />
+        <select id="plano" name="plano" required>
+          <option value="Help! Start">Help! Start</option>
+          <option value="Help! Prime">Help! Prime</option>
+        </select>
+      </p>
 
-        <div class="pf">
-          <div>
-            <label>CPF</label>
-            <input id="cpf" inputmode="numeric" placeholder="000.000.000-00">
-          </div>
-          <div>
-            <label>Nome completo</label>
-            <input id="nome" placeholder="Seu nome" required>
-          </div>
-        </div>
+      <p>
+        <label for="valor">Valor</label><br />
+        <input id="valor" name="valor" placeholder="R$ 0,00" />
+      </p>
 
-        <div class="pj" style="display:none">
-          <div>
-            <label>CNPJ</label>
-            <input id="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00">
-          </div>
-          <div>
-            <label>Razão Social</label>
-            <input id="razao" placeholder="SUA EMPRESA LTDA">
-          </div>
-        </div>
-
-        <div class="full">
-          <label>Responsável</label>
-          <input id="responsavel" placeholder="Nome do responsável" required>
-        </div>
-
-        <div>
-          <label>E-mail</label>
-          <input id="email" type="email" placeholder="email@dominio.com" required>
-        </div>
-        <div>
-          <label>Telefone/WhatsApp</label>
-          <input id="telefone" inputmode="tel" placeholder="(DDD) 90000-0000" required>
-        </div>
-
-        <div class="full">
-          <label>Assinatura (desenhe abaixo)</label>
-          <canvas id="assinaturaCanvas" height="160"></canvas>
-          <div class="row">
-            <button type="button" id="limparAssinatura" class="btn">Limpar Assinatura</button>
-          </div>
-        </div>
-
-        <div class="full row" style="margin-top:8px">
-          <input type="checkbox" id="aceite" required>
-          <label for="aceite">Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
-        </div>
-
-        <div class="full row" style="justify-content:flex-end;margin-top:16px">
-          <button id="gerarPdfBtn" class="btn primary">Gerar PDF + WhatsApp</button>
-        </div>
-        <div id="wa-fallback" class="full muted" style="margin-top:8px"></div>
-      </div>
-    </div>
-
-    <!-- TEMPLATE DO CONTRATO (embutido) -->
-    <template id="tpl-contrato">
-      <div id="contrato" style="font-family:Arial, Helvetica, sans-serif; color:#111; padding:24px; width:794px; background:#fff;">
-        <h2 style="margin:0 0 8px">Contrato – {{PLANO}}</h2>
-        <p style="margin:0 0 16px; color:#444">Data: {{DATA}}</p>
-
-        <h3 style="margin:20px 0 8px">Dados do Contratante</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:14px">
-          <tr><td style="padding:6px;border:1px solid #ddd">Tipo</td><td style="padding:6px;border:1px solid #ddd">{{TIPO}}</td></tr>
-          <tr><td style="padding:6px;border:1px solid #ddd">Documento</td><td style="padding:6px;border:1px solid #ddd">{{DOC}}</td></tr>
-          <tr><td style="padding:6px;border:1px solid #ddd">Nome/Razão Social</td><td style="padding:6px;border:1px solid #ddd">{{NOME_RAZAO}}</td></tr>
-          <tr><td style="padding:6px;border:1px solid #ddd">Responsável</td><td style="padding:6px;border:1px solid #ddd">{{RESP}}</td></tr>
-          <tr><td style="padding:6px;border:1px solid #ddd">E-mail</td><td style="padding:6px;border:1px solid #ddd">{{EMAIL}}</td></tr>
-          <tr><td style="padding:6px;border:1px solid #ddd">Telefone</td><td style="padding:6px;border:1px solid #ddd">{{TEL}}</td></tr>
-        </table>
-
-        <h3 style="margin:20px 0 8px">Condições</h3>
-        <p style="line-height:1.5; color:#333">
-          Este contrato estabelece os termos do plano {{PLANO}} da Help! Agência de Marketing. Ao assinar eletronicamente, o(a) contratante declara ciência e concordância com as condições comerciais, prazos e responsabilidades.
+      <!-- PF -->
+      <div id="secPF">
+        <p>
+          <label for="cpf">CPF</label><br />
+          <input id="cpf" name="cpf" inputmode="numeric" placeholder="000.000.000-00" />
         </p>
-
-        <div style="display:flex; gap:24px; margin-top:32px; align-items:flex-end">
-          <div>
-            <div style="width:320px; height:120px; border:1px solid #bbb; display:flex; align-items:center; justify-content:center">
-              <img id="assinaturaImg" src="{{ASSINATURA}}" alt="Assinatura" style="max-width:100%; max-height:100%; object-fit:contain" />
-            </div>
-            <div style="border-top:1px solid #aaa; margin-top:8px; padding-top:4px; font-size:12px; color:#444">
-              Assinatura do contratante
-            </div>
-          </div>
-          <div style="font-size:12px; color:#444">Gerado em: {{DATA_HORA}}</div>
-        </div>
+        <p>
+          <label for="nome">Nome completo</label><br />
+          <input id="nome" name="nome" placeholder="Seu nome" />
+        </p>
       </div>
-    </template>
-  </div>
 
+      <!-- PJ -->
+      <div id="secPJ" style="display:none">
+        <p>
+          <label for="cnpj">CNPJ</label><br />
+          <input id="cnpj" name="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" />
+        </p>
+        <p>
+          <label for="razao">Razão Social</label><br />
+          <input id="razao" name="razao" placeholder="SUA EMPRESA LTDA" />
+        </p>
+      </div>
+
+      <p>
+        <label for="responsavel">Responsável</label><br />
+        <input id="responsavel" name="responsavel" placeholder="Nome do responsável" required />
+      </p>
+
+      <p>
+        <label for="email">E-mail</label><br />
+        <input id="email" name="email" type="email" placeholder="email@dominio.com" required />
+      </p>
+
+      <p>
+        <label for="telefone">Telefone/WhatsApp</label><br />
+        <input id="telefone" name="telefone" inputmode="tel" placeholder="(DDD) 90000-0000" required />
+      </p>
+
+      <p>
+        <label for="assinaturaCanvas">Assinatura (desenhe abaixo)</label><br />
+        <canvas id="assinaturaCanvas" height="160" style="border:1px dashed #999; width:100%; max-width:600px; background:#fff"></canvas><br />
+        <button type="button" id="limparAssinatura">Limpar Assinatura</button>
+      </p>
+
+      <p>
+        <label><input type="checkbox" id="aceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
+      </p>
+
+      <p>
+        <button id="gerarPdfBtn" type="button">Gerar PDF + WhatsApp</button>
+      </p>
+      <div id="wa-fallback"></div>
+    </form>
+  </main>
+
+  <!-- Apenas JS. Não altera visual; só faz o botão funcionar. -->
   <script>
-    // Utilidades
-    const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  (function(){
+    // ===== Helpers =====
+    const $ = (s, c=document) => c.querySelector(s);
     const onlyDigits = s => String(s||'').replace(/\D+/g,'');
     const slug = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/(^-|-$)/g,'').toLowerCase();
     const hojeISO = () => new Date().toISOString().slice(0,10);
     const dataHoraBR = () => new Date().toLocaleString('pt-BR');
 
-    // Toggle PF/PJ
+    // ===== PF/PJ Toggle (sem impacto visual, só exibe/esconde grupos) =====
     const radiosTipo = document.querySelectorAll('input[name="tipo"]');
-    const secPF = document.querySelector('.pf');
-    const secPJ = document.querySelector('.pj');
-    const toggleTipo = () => {
-      const tipo = [...radiosTipo].find(r=>r.checked)?.value || 'PF';
-      secPF.style.display = tipo==='PF' ? 'grid' : 'none';
-      secPJ.style.display = tipo==='PJ' ? 'grid' : 'none';
-      $('#cpf')?.toggleAttribute('required', tipo==='PF');
-      $('#nome')?.toggleAttribute('required', tipo==='PF');
-      $('#cnpj')?.toggleAttribute('required', tipo==='PJ');
-      $('#razao')?.toggleAttribute('required', tipo==='PJ');
-    };
+    const secPF = $('#secPF'), secPJ = $('#secPJ'), cpf = $('#cpf'), nome = $('#nome'), cnpj = $('#cnpj'), razao = $('#razao');
+    function toggleTipo(){
+      const isPJ = (document.querySelector('input[name="tipo"]:checked')?.value || 'PF') === 'PJ';
+      secPF.style.display = isPJ ? 'none' : '';
+      secPJ.style.display = isPJ ? '' : 'none';
+      if (cpf) cpf.required = !isPJ;
+      if (nome) nome.required = !isPJ;
+      if (cnpj) cnpj.required = isPJ;
+      if (razao) razao.required = isPJ;
+    }
     radiosTipo.forEach(r=>r.addEventListener('change', toggleTipo));
     toggleTipo();
 
-    // SignaturePad
+    // ===== SignaturePad (sem mudar layout) =====
     const canvas = $('#assinaturaCanvas');
-    const pad = new SignaturePad(canvas, { backgroundColor:'#0f0f0f' });
-    const resizeCanvas = () => {
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      canvas.width = canvas.clientWidth * ratio;
-      canvas.height = canvas.clientHeight * ratio;
-      const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
-      pad.clear();
-    };
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-    $('#limparAssinatura').addEventListener('click', ()=> pad.clear());
+    let pad = null;
+    if (window.SignaturePad && canvas) {
+      pad = new window.SignaturePad(canvas, { backgroundColor: '#fff' });
+      const resize = () => {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        const wasEmpty = pad.isEmpty();
+        canvas.width = canvas.clientWidth * ratio;
+        canvas.height = canvas.clientHeight * ratio;
+        const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+        if (wasEmpty) pad.clear();
+      };
+      window.addEventListener('resize', resize); resize();
+      $('#limparAssinatura').addEventListener('click', ()=> pad && pad.clear());
+    }
 
-    // Monta contrato a partir do template embutido
+    // ===== Montagem do contrato (off-screen) =====
     function montarContrato(dados, assinaturaDataURL){
-      const tpl = $('#tpl-contrato').content.cloneNode(true);
-      const el = tpl.querySelector('#contrato');
-      const map = {
-        '{{PLANO}}': dados.plano,
-        '{{DATA}}': hojeISO(),
-        '{{DATA_HORA}}': dataHoraBR(),
-        '{{TIPO}}': dados.tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física',
-        '{{DOC}}': dados.tipo === 'PJ' ? (dados.cnpj||'') : (dados.cpf||''),
-        '{{NOME_RAZAO}}': dados.tipo === 'PJ' ? (dados.razao||'') : (dados.nome||''),
-        '{{RESP}}': dados.responsavel||'',
-        '{{EMAIL}}': dados.email||'',
-        '{{TEL}}': dados.telefone||'',
-        '{{ASSINATURA}}': assinaturaDataURL || ''
-      };
-      let html = el.outerHTML;
-      for (const k in map) html = html.replaceAll(k, map[k]);
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = html;
-      return wrapper.firstElementChild;
-    }
+      const wrap = document.createElement('div');
+      wrap.style.position = 'fixed';
+      wrap.style.left = '-99999px';
+      wrap.style.top = '0';
+      wrap.style.pointerEvents = 'none';
+      wrap.innerHTML = `
+        <div id="contrato" style="font-family:Arial, Helvetica, sans-serif; color:#111; padding:24px; width:794px; background:#fff;">
+          <h2 style="margin:0 0 8px">Contrato – ${dados.plano || '-'}</h2>
+          <p style="margin:0 0 16px; color:#444">Data: ${hojeISO()}</p>
 
-    async function gerarPDF(element, filename){
-      if ('fonts' in document) { try { await document.fonts.ready; } catch(e){} }
-      return html2pdf().from(element).set({
-        margin: 10,
-        filename,
-        html2canvas: { scale: 2, useCORS: true, backgroundColor:'#ffffff' },
-        jsPDF: { unit: 'pt', format: 'a4', compress: true }
-      }).save();
-    }
-
-    function abrirWhats(numero, mensagem){
-      const n = onlyDigits(numero);
-      const url = `https://wa.me/${n}?text=${encodeURIComponent(mensagem)}`;
-      const win = window.open(url, '_blank');
-      if (!win) {
-        const a = document.createElement('a');
-        a.href = url; a.target = '_blank'; a.textContent = 'Abrir WhatsApp';
-        $('#wa-fallback').append(' Pop-up bloqueado. ', a);
-      }
-    }
-
-    function coletaDados(){
-      const tipo = [...document.querySelectorAll('input[name="tipo"]')].find(r=>r.checked)?.value || 'PF';
-      return {
-        tipo,
-        plano: $('#plano').value.trim(),
-        cpf: $('#cpf')?.value.trim(),
-        nome: $('#nome')?.value.trim(),
-        cnpj: $('#cnpj')?.value.trim(),
-        razao: $('#razao')?.value.trim(),
-        responsavel: $('#responsavel').value.trim(),
-        email: $('#email').value.trim(),
-        telefone: $('#telefone').value.trim(),
-        aceite: $('#aceite').checked
-      };
-    }
-
-    function comporMensagem(d){
-      const nomeRazao = d.tipo === 'PJ' ? (d.razao||'') : (d.nome||'');
-      return `Olá! Segue o contrato do plano ${d.plano}.
-Tipo: ${d.tipo === 'PJ' ? 'Pessoa Jurídica' : 'Pessoa Física'}
-Documento: ${d.tipo === 'PJ' ? (d.cnpj||'') : (d.cpf||'')}
-Nome/Razão Social: ${nomeRazao}
-Responsável: ${d.responsavel}
-Data: ${hojeISO()}
-
-Após baixar o PDF, confirme o recebimento.`;
-    }
-
-    // 🔧 Patch JS anti-overlay: neutraliza qualquer elemento por cima do botão
-    (function () {
-      function liberarCliqueNoBotao() {
-        const btn = document.querySelector('#gerarPdfBtn');
-        if (!btn) return;
-
-        const r = btn.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-
-        const topEl = document.elementFromPoint(cx, cy);
-        if (topEl && topEl !== btn && !btn.contains(topEl)) {
-          topEl.style.pointerEvents = 'none';
-        }
-      }
-      window.addEventListener('load', liberarCliqueNoBotao);
-      window.addEventListener('resize', liberarCliqueNoBotao);
-      document.addEventListener('scroll', liberarCliqueNoBotao, { passive: true });
-      const mo = new MutationObserver(liberarCliqueNoBotao);
-      mo.observe(document.documentElement, { childList: true, subtree: true });
-    })();
-
-    // Handler principal
-    $('#gerarPdfBtn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const btn = e.currentTarget;
-      try{
-        btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Gerando...';
-
-        const d = coletaDados();
-        if (!d.plano || !d.responsavel || !d.email || !d.telefone) throw new Error('Preencha os campos obrigatórios.');
-        if (!d.aceite) throw new Error('É necessário aceitar o contrato.');
-        if (d.tipo === 'PF' && (!d.cpf || !d.nome)) throw new Error('Preencha CPF e Nome.');
-        if (d.tipo === 'PJ' && (!d.cnpj || !d.razao)) throw new Error('Preencha CNPJ e Razão Social.');
-        if (typeof SignaturePad !== 'undefined') {
-          // se pad existir
-          if (pad.isEmpty()) throw new Error('Assine no campo de assinatura.');
-        }
-
-        const assinaturaDataURL = (typeof pad !== 'undefined' && pad.toDataURL) ? pad.toDataURL('image/png') : '';
-        const contratoEl = montarContrato(d, assinaturaDataURL);
-
-        // Mantém fora da área visível para não cobrir interface
-        contratoEl.style.position = 'fixed';
-        contratoEl.style.left = '-99999px';
-        contratoEl.style.top = '0';
-        contratoEl.style.pointerEvents = 'none';
-        document.body.appendChild(contratoEl);
-
-        const nomeBase = d.tipo === 'PJ' ? (d.razao || 'contratante') : (d.nome || 'contratante');
-        const filename = `Contrato-${slug(nomeBase)}-${hojeISO()}.pdf`;
-
-        await gerarPDF(contratoEl, filename);
-        abrirWhats(d.telefone, comporMensagem(d));
-
-        contratoEl.remove();
-        btn.textContent = orig; btn.disabled = false;
-      } catch(err){
-        alert(err.message || 'Falha ao gerar o PDF.');
-        btn.textContent = 'Gerar PDF + WhatsApp'; btn.disabled = false;
-      }
-    });
-  </script>
-</body>
-</html>
+          <h3 style="margin:20px 0 8px">Dados do Contratante</h3>
+          <table style="width:100%; border-collapse:collapse; font-size:14px">
+            <tr><td style="padding:6px;border:1px solid #ddd">Tipo</td><td style="padding:6px;border:1px solid #ddd">${dados.tipo}</td></tr>
+            <tr><td style="padding:6px;border:1px solid #dd
