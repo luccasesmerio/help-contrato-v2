@@ -5,7 +5,7 @@
   <title>Assinatura do Contrato | Help!</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Estilo mínimo para layout limpo -->
+  <!-- Estilo mínimo + patch anti-overlay -->
   <style>
     :root { --bg:#0b0b0b; --card:#151515; --text:#eaeaea; --muted:#9aa0a6; --brand:#ffd400; }
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text);}
@@ -23,9 +23,20 @@
     canvas{width:100%;height:160px;background:#0f0f0f;border:1px dashed #333;border-radius:12px}
     a.link{color:var(--brand);text-decoration:none}
     .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+
+    /* 🔒 Botão sempre clicável (anti-overlay) */
+    #gerarPdfBtn { position: relative !important; z-index: 9999 !important; pointer-events: auto !important; cursor: pointer !important; }
+    /* 🔗 Topo não deve cobrir conteúdo */
+    .topbar, .topbar * { position: relative; z-index: 1; pointer-events: auto; }
+    /* 📄 Qualquer contrato injetado não bloqueia clique */
+    #contrato { position: static !important; pointer-events: none !important; }
+    /* Bloqueadores comuns perdem clique */
+    [aria-hidden="true"], .overlay, .modal-backdrop {
+      pointer-events: none !important;
+    }
   </style>
 
-  <!-- CDNs (evita paths quebrados no GH Pages) -->
+  <!-- CDNs (evita 404 no GH Pages) -->
   <!-- html2pdf bundle já inclui html2canvas + jsPDF -->
   <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"></script>
@@ -45,13 +56,12 @@
       <h1>Help! – Assinatura</h1>
       <p class="sub">Preencha seus dados e assine abaixo</p>
 
-      <!-- Tipo de contratante (opcional) -->
+      <!-- Tipo de contratante -->
       <div class="row" style="margin-bottom:8px">
         <label class="muted" style="margin:0">Tipo de contratante</label>
         <div class="row">
           <label class="row" style="gap:6px"><input type="radio" name="tipo" value="PF" checked> Pessoa Física (CPF)</label>
           <label class="row" style="gap:6px"><input type="radio" name="tipo" value="PJ"> Pessoa Jurídica (CNPJ)</label>
-          <span class="muted">• Campos ajustam automaticamente</span>
         </div>
       </div>
 
@@ -82,7 +92,7 @@
           </div>
           <div>
             <label>Razão Social</label>
-            <input id="razao" placeholder="SUA EMPRESA LTDA" >
+            <input id="razao" placeholder="SUA EMPRESA LTDA">
           </div>
         </div>
 
@@ -120,9 +130,9 @@
       </div>
     </div>
 
-    <!-- TEMPLATE DO CONTRATO (embutido para não depender de fetch) -->
+    <!-- TEMPLATE DO CONTRATO (embutido) -->
     <template id="tpl-contrato">
-      <div id="contrato" style="font-family:Arial, Helvetica, sans-serif; color:#111; padding:24px; width:794px; /* A4 width @96dpi */">
+      <div id="contrato" style="font-family:Arial, Helvetica, sans-serif; color:#111; padding:24px; width:794px; background:#fff;">
         <h2 style="margin:0 0 8px">Contrato – {{PLANO}}</h2>
         <p style="margin:0 0 16px; color:#444">Data: {{DATA}}</p>
 
@@ -217,7 +227,6 @@
       return wrapper.firstElementChild;
     }
 
-    // Gerar PDF e abrir WhatsApp
     async function gerarPDF(element, filename){
       if ('fonts' in document) { try { await document.fonts.ready; } catch(e){} }
       return html2pdf().from(element).set({
@@ -267,6 +276,29 @@ Data: ${hojeISO()}
 Após baixar o PDF, confirme o recebimento.`;
     }
 
+    // 🔧 Patch JS anti-overlay: neutraliza qualquer elemento por cima do botão
+    (function () {
+      function liberarCliqueNoBotao() {
+        const btn = document.querySelector('#gerarPdfBtn');
+        if (!btn) return;
+
+        const r = btn.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+
+        const topEl = document.elementFromPoint(cx, cy);
+        if (topEl && topEl !== btn && !btn.contains(topEl)) {
+          topEl.style.pointerEvents = 'none';
+        }
+      }
+      window.addEventListener('load', liberarCliqueNoBotao);
+      window.addEventListener('resize', liberarCliqueNoBotao);
+      document.addEventListener('scroll', liberarCliqueNoBotao, { passive: true });
+      const mo = new MutationObserver(liberarCliqueNoBotao);
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+    })();
+
+    // Handler principal
     $('#gerarPdfBtn').addEventListener('click', async (e) => {
       e.preventDefault();
       const btn = e.currentTarget;
@@ -274,28 +306,29 @@ Após baixar o PDF, confirme o recebimento.`;
         btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Gerando...';
 
         const d = coletaDados();
-        // Validações mínimas
         if (!d.plano || !d.responsavel || !d.email || !d.telefone) throw new Error('Preencha os campos obrigatórios.');
         if (!d.aceite) throw new Error('É necessário aceitar o contrato.');
         if (d.tipo === 'PF' && (!d.cpf || !d.nome)) throw new Error('Preencha CPF e Nome.');
         if (d.tipo === 'PJ' && (!d.cnpj || !d.razao)) throw new Error('Preencha CNPJ e Razão Social.');
-        if (pad.isEmpty()) throw new Error('Assine no campo de assinatura.');
+        if (typeof SignaturePad !== 'undefined') {
+          // se pad existir
+          if (pad.isEmpty()) throw new Error('Assine no campo de assinatura.');
+        }
 
-        // Assinatura -> dataURL
-        const assinaturaDataURL = pad.toDataURL('image/png');
-
-        // Contrato HTML
+        const assinaturaDataURL = (typeof pad !== 'undefined' && pad.toDataURL) ? pad.toDataURL('image/png') : '';
         const contratoEl = montarContrato(d, assinaturaDataURL);
-        document.body.appendChild(contratoEl); // precisa estar no DOM para renderizar bem
 
-        // Nome do arquivo
+        // Mantém fora da área visível para não cobrir interface
+        contratoEl.style.position = 'fixed';
+        contratoEl.style.left = '-99999px';
+        contratoEl.style.top = '0';
+        contratoEl.style.pointerEvents = 'none';
+        document.body.appendChild(contratoEl);
+
         const nomeBase = d.tipo === 'PJ' ? (d.razao || 'contratante') : (d.nome || 'contratante');
         const filename = `Contrato-${slug(nomeBase)}-${hojeISO()}.pdf`;
 
-        // PDF
         await gerarPDF(contratoEl, filename);
-
-        // WhatsApp
         abrirWhats(d.telefone, comporMensagem(d));
 
         contratoEl.remove();
@@ -305,11 +338,6 @@ Após baixar o PDF, confirme o recebimento.`;
         btn.textContent = 'Gerar PDF + WhatsApp'; btn.disabled = false;
       }
     });
-
-    // ✅ DIFERENÇA-CHAVE QUE CORRIGE O GH PAGES:
-    // - Link "Ler Contrato" é RELATIVO: "./contract.html" (não "/contract.html")
-    // - Todas libs são via CDN (não "/js/..."), evitando 404 em /help-contrato-v2/
-    // - Template do contrato EMBUTIDO (sem fetch('/contract.html'))
   </script>
 </body>
 </html>
