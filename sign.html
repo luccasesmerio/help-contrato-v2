@@ -71,13 +71,13 @@
     <!-- Documento -->
     <div>
       <label id="lblDoc">CPF</label>
-      <input id="fldDoc" required placeholder="000.000.000-00" />
+      <input id="fldDoc" required placeholder="000.000.000-00" autocomplete="off"/>
     </div>
 
     <!-- Nome / Razão -->
     <div class="full">
       <label id="lblRazao">Nome completo</label>
-      <input id="fldRazao" required placeholder="Seu nome completo"/>
+      <input id="fldRazao" required placeholder="Seu nome completo" autocomplete="name"/>
     </div>
 
     <!-- Responsável (apenas PJ) -->
@@ -88,11 +88,11 @@
 
     <div>
       <label>E-mail</label>
-      <input id="fldEmail" type="email" required placeholder="contato@empresa.com"/>
+      <input id="fldEmail" type="email" required placeholder="contato@empresa.com" autocomplete="email"/>
     </div>
     <div class="full">
       <label>Telefone/WhatsApp</label>
-      <input id="fldFone" required placeholder="(00) 00000-0000" />
+      <input id="fldFone" required placeholder="(00) 00000-0000" autocomplete="tel" />
     </div>
 
     <!-- Assinatura -->
@@ -113,13 +113,14 @@
   </form>
 </main>
 
-<div class="toast" id="toast">PDF gerado e WhatsApp aberto. Obrigado!</div>
+<div class="toast" id="toast">PDF gerado. Encaminhe pelo WhatsApp no compartilhamento do navegador.</div>
 <canvas class="confetti" id="confetti"></canvas>
 
 <script>
   // libs
   const { jsPDF } = window.jspdf;
   let sigPad;
+  let LAST_PDF_URL = null;
 
   // ---------- Assinatura ----------
   function initSigPad() {
@@ -277,6 +278,7 @@
 
     const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
     const nodes = holder.querySelectorAll('.page');
+
     for(let i=0;i<nodes.length;i++) {
       const canvas = await html2canvas(nodes[i], { scale:2, backgroundColor:'#ffffff', useCORS:true, allowTaint:false });
       const img = canvas.toDataURL('image/png');
@@ -320,6 +322,9 @@
   document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
   document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
 
+  // Revoga URL antigo quando sair da página (boa prática)
+  window.addEventListener('pagehide', ()=>{ if (LAST_PDF_URL) { URL.revokeObjectURL(LAST_PDF_URL); LAST_PDF_URL = null; } });
+
   document.getElementById('formAssinatura').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const form = e.currentTarget;
@@ -338,49 +343,34 @@
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
 
-    // 4) abre aba antes (reduz bloqueio), segura redirecionamento até concluir PDF
-    let waWin = null;
-    try { waWin = window.open('about:blank', '_blank'); } catch(_) {}
-
     try{
       const assinaturaPNG = sigPad.toDataURL('image/png'); // síncrono
       const { pdf, docId, dataHora } = await buildPdf(d, assinaturaPNG, d.isPF);
 
-      const fileName = 'Contrato_' + d.razao.replace(/\s+/g,'_') + '_' + docId + '.pdf';
-      pdf.save(fileName); // jsPDF v2.x não retorna Promise
+      // Coloca metadados ANTES de gerar o binário
+      pdf.setProperties({ title: 'Contrato ' + d.razao + ' - ' + docId, subject: 'Contrato Help!', author: 'Help!' });
 
-      const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
-      const resumo = [
-        'Proposta Help!',
-        'Plano: ' + d.plano,
-        'Valor: ' + d.valorPlano,
-        rotDoc + ': ' + d.doc,
-        'Nome/Razão: ' + d.razao,
-        (d.isPF ? null : 'Responsável: ' + (d.resp||'')),
-        'E-mail: ' + d.email,
-        'Fone: ' + d.fone,
-        'Data/Hora: ' + dataHora,
-        'ID: ' + docId
-      ].filter(Boolean).join('\n'); // << correção: \n (sem %0A)
+      // Gera Blob e abre na MESMA ABA
+      const arrayBuffer = await pdf.output('arraybuffer');
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
 
-      const WHATSAPP_NUMBER = '5519984278886'; // ajuste
-      const waUrl = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(resumo);
-
-      // dá um fôlego pro download iniciar antes de redirecionar
-      setTimeout(()=>{
-        if (waWin && !waWin.closed) {
-          waWin.location.href = waUrl;
-        } else {
-          window.location.href = waUrl; // fallback se popup for bloqueado
-        }
-      }, 600);
+      // Revoga URL anterior se existir
+      if (LAST_PDF_URL) { URL.revokeObjectURL(LAST_PDF_URL); LAST_PDF_URL = null; }
+      const pdfUrl = URL.createObjectURL(blob);
+      LAST_PDF_URL = pdfUrl;
 
       showToast();
       shootConfetti();
+
+      // Redireciona para o PDF no mesmo tab
+      window.location.replace(pdfUrl);
+
+      // Fallback: alguns navegadores podem preferir _self
+      setTimeout(()=>{ try { window.open(pdfUrl, '_self'); } catch(_) {} }, 300);
+
     }catch(err){
       console.error(err);
       alert('Não foi possível gerar o PDF. Veja o console.');
-      if (waWin && !waWin.closed) waWin.close(); // evita aba em branco
     }finally{
       btn.disabled = false; btn.textContent = originalText;
     }
