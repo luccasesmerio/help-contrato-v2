@@ -7,16 +7,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root{ --brand:#FFC107; --dark:#000; --light:#fff; --muted:#666; --border:#e5e5e5; --radius:14px; }
-    *{box-sizing:border-box} body{margin:0;font:500 16px/1.6 'Open Sans',ui-sans-serif;color:#111;background:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;font:500 16px/1.6 'Open Sans',ui-sans-serif;color:#111;background:#fff}
     header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);z-index:10}
     .container{max-width:900px;margin:0 auto;padding:16px}
     .brand{display:flex;align-items:center;gap:10px}
     .brand img{width:30px;height:30px;border-radius:8px;object-fit:cover}
-    .grid{display:grid;gap:14px;grid-template-columns:1fr 1fr} .full{grid-column:1/-1}
+    .grid{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+    .full{grid-column:1/-1}
     input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border)}
     label{font-size:13px;color:#444}
     .card{border:1px solid var(--border);padding:16px;border-radius:var(--radius)}
     .btn{border:0;background:linear-gradient(180deg,#FFD54F,#FFC107);color:#000;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-family:'Montserrat',sans-serif;box-shadow:0 6px 18px rgba(255,193,7,.25)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
     .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
     canvas{display:block;width:100%;height:160px;background:#f8f8f8;border:1px dashed #ccc;border-radius:10px}
     .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.3s}
@@ -34,15 +37,15 @@
 <header>
   <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
     <div class="brand">
-      <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!">
+      <img src="https://i.imgur.com/HzfBxmz.png" alt="Help!" loading="lazy">
       <div><strong style="font-family:'Montserrat',sans-serif">Help! – Assinatura</strong><div style="font-size:12px;color:#666">Preencha seus dados e assine abaixo</div></div>
     </div>
-    <button class="btn" onclick="location.href='contract.html'">Ler Contrato</button>
+    <button class="btn" type="button" onclick="location.href='contract.html'">Ler Contrato</button>
   </div>
 </header>
 
 <main class="container">
-  <form class="grid" onsubmit="submitForm(event)">
+  <form class="grid" id="formAssinatura">
     <!-- Tipo de Pessoa -->
     <div class="full">
       <label>Tipo de contratante</label>
@@ -55,7 +58,7 @@
 
     <div>
       <label>Plano</label>
-      <select id="fldPlano" onchange="updateValor()">
+      <select id="fldPlano">
         <option>Help! Start</option>
         <option selected>Help! Prime</option>
       </select>
@@ -68,7 +71,7 @@
     <!-- Documento -->
     <div>
       <label id="lblDoc">CPF</label>
-      <input id="fldDoc" required placeholder="000.000.000-00" oninput="maskDoc(this)" />
+      <input id="fldDoc" required placeholder="000.000.000-00" />
     </div>
 
     <!-- Nome / Razão -->
@@ -89,7 +92,7 @@
     </div>
     <div class="full">
       <label>Telefone/WhatsApp</label>
-      <input id="fldFone" required placeholder="(00) 00000-0000" oninput="maskPhone(this)" />
+      <input id="fldFone" required placeholder="(00) 00000-0000" />
     </div>
 
     <!-- Assinatura -->
@@ -97,7 +100,7 @@
       <label>Assinatura (desenhe abaixo)</label>
       <canvas id="sigCanvas"></canvas>
       <div style="margin-top:8px;display:flex;gap:8px">
-        <button class="btn" type="button" onclick="clearSignature()">Limpar Assinatura</button>
+        <button class="btn" type="button" id="btnLimpar">Limpar Assinatura</button>
       </div>
     </div>
 
@@ -105,7 +108,7 @@
       <label><input type="checkbox" id="fldAceite" required> Autorizo assinatura eletrônica e confirmo que li o contrato.</label>
     </div>
     <div class="full actions">
-      <button type="submit" class="btn">Gerar PDF + WhatsApp</button>
+      <button type="submit" class="btn" id="btnSubmit">Gerar PDF + WhatsApp</button>
     </div>
   </form>
 </main>
@@ -116,52 +119,46 @@
 <script>
   const { jsPDF } = window.jspdf;
   let sigPad;
+  const WHATSAPP_NUMBER = '5519984278886'; // <- ajuste aqui
 
-  // ---------- Init assinatura ----------
-  function initSigPad() {
-    const c = document.getElementById('sigCanvas');
-    const rect = c.getBoundingClientRect();
-    c.width = Math.max(320, Math.floor(rect.width));
-    c.height = 160;
-    if (sigPad) sigPad.off();
-    sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor:'#000' });
-  }
-  window.addEventListener('load', ()=>{ initSigPad(); applyTipo(); });
-  window.addEventListener('resize', initSigPad);
-
-  function clearSignature(){ sigPad && sigPad.clear(); }
-
-  // ---------- Máscaras e validação ----------
+  // ---------- Helpers de máscara/validação ----------
   const getDigits = s => (s||'').toString().replace(/\D+/g,'');
-  function maskPhone(i) {
-    let v = getDigits(i.value);
-    if(v.length > 11) v = v.slice(0,11);
-    i.value = v.length<=10
-      ? v.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (_,$1,$2,$3)=> ($1?`(${ $1 }`) + ($1&&$2?`) ${$2}`: $1?')':'' ) + ($3?`-${$3}`:''))
-      : v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  function formatPhone(value){
+    let v = getDigits(value).slice(0,11);
+    if(v.length <= 10){ // fixo
+      return v.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (m,a,b,c)=> {
+        let out = '';
+        if(a) out += `(${a}` + (a.length===2?') ':'');
+        if(b) out += b;
+        if(c) out += '-' + c;
+        return out;
+      });
+    }
+    return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3'); // celular
   }
+  function maskPhone(i){ i.value = formatPhone(i.value); }
   function maskCPF(d){ return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
   function maskCNPJ(d){ return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); }
   function maskDoc(i){
     const isPF = document.getElementById('rPF').checked;
     let d = getDigits(i.value);
     d = isPF ? d.slice(0,11) : d.slice(0,14);
-    i.value = isPF ? (d.length?maskCPF(d):'') : (d.length?maskCNPJ(d):'');
+    i.value = d ? (isPF ? maskCPF(d) : maskCNPJ(d)) : '';
   }
   function vCPF(v){
-    const d=getDigits(v); if(d.length!==11 || /^(\d)\1{10}$/.test(d)) return false;
+    const d=getDigits(v); if(d.length!==11 || /^(\d){10}$/.test(d)) return false;
     let s=0; for(let i=0;i<9;i++) s+= +d[i]*(10-i);
     let r=(s*10)%11; if(r===10) r=0; if(r!== +d[9]) return false;
     s=0; for(let i=0;i<10;i++) s+= +d[i]*(11-i);
     r=(s*10)%11; if(r===10) r=0; return r=== +d[10];
   }
   function vCNPJ(v){
-    const d=getDigits(v); if(d.length!==14 || /^(\d)\1{13}$/.test(d)) return false;
-    const calc = len => { const f=(len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2]; let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i]; const r=s%11; return r<2?0:11-r; };
+    const d=getDigits(v); if(d.length!==14 || /^(\d){13}$/.test(d)) return false;
+    const calc = (len)=>{ const f=(len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2]; let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i]; const r=s%11; return r<2?0:11-r; };
     return calc(12)=== +d[12] && calc(13)=== +d[13];
   }
 
-  // ---------- Dinâmica PF/PJ ----------
+  // ---------- PF/PJ ----------
   function applyTipo(){
     const isPF = document.getElementById('rPF').checked;
     const lblDoc = document.getElementById('lblDoc');
@@ -169,30 +166,52 @@
     const lblRazao = document.getElementById('lblRazao');
     const fldRazao = document.getElementById('fldRazao');
     const grpResp = document.getElementById('grpResp');
-    const lblResp = document.getElementById('lblResp');
 
-    // Ajusta rótulos e placeholders
     lblDoc.textContent = isPF ? 'CPF' : 'CNPJ';
     fldDoc.placeholder = isPF ? '000.000.000-00' : '00.000.000/0000-00';
     lblRazao.textContent = isPF ? 'Nome completo' : 'Razão Social';
     fldRazao.placeholder = isPF ? 'Seu nome completo' : 'Nome da Empresa LTDA';
 
-    // Responsável só em PJ
     grpResp.style.display = isPF ? 'none' : 'block';
-    lblResp.textContent = 'Responsável';
     document.getElementById('fldResp').required = !isPF;
 
-    // Limpa doc se trocou de formato
     fldDoc.value = '';
   }
-  document.getElementById('rPF').addEventListener('change', applyTipo);
-  document.getElementById('rPJ').addEventListener('change', applyTipo);
 
   // ---------- Plano ----------
   function updateValor() {
     const plano = document.getElementById('fldPlano').value;
     document.getElementById('fldValor').value = plano.includes('Prime') ? 'R$ 2.000,00/mês' : 'R$ 1.500,00/mês';
   }
+
+  // ---------- SignaturePad com DPR & preservação no resize ----------
+  function initSigPad(){
+    const c = document.getElementById('sigCanvas');
+    const rect = c.getBoundingClientRect();
+
+    const prevData = sigPad && !sigPad.isEmpty() ? sigPad.toData() : null;
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    c.width  = Math.floor(rect.width * ratio);
+    c.height = Math.floor(160 * ratio);
+    c.style.width  = rect.width + 'px';
+    c.style.height = '160px';
+    const ctx = c.getContext('2d');
+    ctx.scale(ratio, ratio);
+
+    if(sigPad) sigPad.off();
+    sigPad = new SignaturePad(c, { backgroundColor: 'rgba(0,0,0,0)', penColor: '#000' });
+
+    if(prevData){ try{ sigPad.fromData(prevData); }catch(e){ /* ignora */ } }
+  }
+
+  let resizeTimer;
+  function handleResize(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(initSigPad, 150);
+  }
+
+  function clearSignature(){ sigPad && sigPad.clear(); }
 
   // ---------- Util ----------
   function genDocId() {
@@ -202,22 +221,45 @@
   }
   function escapeHtml(str){return (str||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
 
+  async function fetchTemplate(){
+    try{
+      const resp = await fetch('contract-fill.html', { cache: 'no-store' });
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      return await resp.text();
+    }catch(e){
+      console.warn('Falha ao carregar contract-fill.html, usando template interno.', e);
+      return `
+        <style>
+          .page{width:794px; height:1123px; padding:48px; box-sizing:border-box; font-family:'Open Sans',sans-serif; color:#111}
+          h1{font-family:'Montserrat',sans-serif; font-size:22px; margin:0 0 12px}
+          .muted{color:#666}
+        </style>
+        <div class="page">
+          <h1>Contrato Help! – {{PLANO}}</h1>
+          <p class="muted">ID: {{DOCID}} • Gerado em {{DATETIME}}</p>
+          <p><strong>Contratante:</strong> {{RAZAO}} ({{PESSOA_TIPO}})</p>
+          <p><strong>Documento:</strong> {{DOC_ID}}</p>
+          <p><strong>E-mail:</strong> {{EMAIL}} • <strong>Fone:</strong> {{FONE}}</p>
+          <p><strong>Valor:</strong> {{VALOR}}</p>
+          <p>Declaro que li e aceito os termos do contrato em {{DATA}}.</p>
+          <p>Assinatura:</p>
+          <div style="margin-top:12px">{{ASSINATURA}}</div>
+        </div>`;
+    }
+  }
+
   // ---------- Montagem PDF ----------
   async function buildPdf(data, assinaturaPNG, isPF) {
-    // Carrega template do contrato preenchível
-    const respTpl = await fetch('contract-fill.html');
-    let tpl = await respTpl.text();
+    let tpl = await fetchTemplate();
 
     const now = new Date();
     const dataHora = now.toLocaleString('pt-BR');
     const docId = genDocId();
 
-    // Mapeia campos conforme PF/PJ
-    const displayName = data.razao;                        // PF: Nome completo | PJ: Razão Social
+    const displayName = data.razao;
     const responsavel  = isPF ? data.razao : (data.resp||data.razao);
-    const docGeneric   = data.doc;                         // CPF ou CNPJ, já mascarado
+    const docGeneric   = data.doc;
 
-    // Se o template antigo tiver "CNPJ", forçamos exibir "CPF/CNPJ"
     tpl = tpl.replaceAll('CNPJ', 'CPF/CNPJ');
 
     const pdfHtml = tpl
@@ -231,13 +273,11 @@
       .replaceAll('{{DATETIME}}', escapeHtml(dataHora))
       .replaceAll('{{DOCID}}', escapeHtml(docId))
       .replaceAll('{{PESSOA_TIPO}}', isPF ? 'Pessoa Física' : 'Pessoa Jurídica')
-      // Compat: preenche tanto {{CNPJ}} quanto {{CPF}} ou {{DOC_ID}}
       .replaceAll('{{CNPJ}}', escapeHtml(docGeneric))
       .replaceAll('{{CPF}}',  escapeHtml(docGeneric))
       .replaceAll('{{DOC_ID}}',escapeHtml(docGeneric))
       .replaceAll('{{ASSINATURA}}', '<img src="' + assinaturaPNG + '" alt="Assinatura" style="height:80px">');
 
-    // Render invisível e captura páginas
     const holder = document.createElement('div');
     holder.style.position = 'fixed'; holder.style.left='-200vw'; holder.style.top='0';
     holder.style.width='794px';
@@ -246,8 +286,9 @@
 
     const pdf = new jsPDF({ unit:'pt', format:'a4', putOnlyUsedFonts:true });
     const nodes = holder.querySelectorAll('.page');
+
     for(let i=0;i<nodes.length;i++) {
-      const canvas = await html2canvas(nodes[i], { scale:2, backgroundColor:'#ffffff' });
+      const canvas = await html2canvas(nodes[i], { scale:2, backgroundColor:'#ffffff', useCORS:true, allowTaint:false });
       const img = canvas.toDataURL('image/png');
       pdf.addImage(img, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
       if(i < nodes.length-1) pdf.addPage();
@@ -256,7 +297,7 @@
     return { pdf, docId, dataHora };
   }
 
-  // ---------- Coleta dados ----------
+  // ---------- Coleta ----------
   function collectData() {
     const isPF = document.getElementById('rPF').checked;
     const plano = document.getElementById('fldPlano').value;
@@ -276,50 +317,8 @@
     };
   }
 
-  // ---------- Submit ----------
-  async function submitForm(e) {
-    e.preventDefault();
-    const d = collectData();
-    // Validação de documento conforme tipo
-    const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
-    if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
-
-    // Campos obrigatórios
-    if(!(d.doc && d.razao && d.email && d.fone && d.aceite)){ alert('Preencha todos os campos obrigatórios e marque o aceite.'); return; }
-    if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
-
-    if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
-    const assinaturaPNG = sigPad.toDataURL('image/png');
-
-    // Gera PDF
-    const built = await buildPdf(d, assinaturaPNG, d.isPF);
-    const { pdf, docId, dataHora } = built;
-
-    // Salva local
-    const nameBase = d.razao.replace(/\s+/g,'_');
-    const fileName = 'Contrato_' + nameBase + '_' + docId + '.pdf';
-    pdf.save(fileName);
-
-    // Abre WhatsApp com resumo
-    const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
-    const resumo = 'Proposta Help!%0APlano: ' + encodeURIComponent(d.plano)
-      + '%0AValor: ' + encodeURIComponent(d.valorPlano)
-      + '%0A' + rotDoc + ': ' + encodeURIComponent(d.doc)
-      + '%0ANome/Razão: ' + encodeURIComponent(d.razao)
-      + (d.isPF ? '' : '%0AResponsável: ' + encodeURIComponent(d.resp||''))
-      + '%0AE-mail: ' + encodeURIComponent(d.email)
-      + '%0AFone: ' + encodeURIComponent(d.fone)
-      + '%0AData/Hora: ' + encodeURIComponent(dataHora)
-      + '%0AID: ' + encodeURIComponent(docId);
-    // ajuste o número abaixo:
-    window.open('https://wa.me/5519984278886?text=' + resumo, '_blank');
-
-    showToast(); shootConfetti();
-  }
-
   // ---------- UI feedback ----------
   function showToast(){ const t=document.getElementById('toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3500);}
-
   function shootConfetti() {
     const c = document.getElementById('confetti'); const ctx = c.getContext('2d');
     c.style.display='block'; c.width=innerWidth; c.height=innerHeight;
@@ -328,6 +327,66 @@
     function draw(){ ctx.clearRect(0,0,c.width,c.height); pieces.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=.05; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle = ['#FFC107','#000','#2C2C2C','#F5F5F5'][Math.floor(Math.random()*4)]; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore(); }); if(t++<150) requestAnimationFrame(draw); else c.style.display='none'; }
     draw();
   }
+
+  // ---------- Submit ----------
+  async function onSubmit(e){
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
+
+    try{
+      const d = collectData();
+
+      const okDoc = d.isPF ? vCPF(d.doc) : vCNPJ(d.doc);
+      if(!okDoc){ alert(d.isPF ? 'CPF inválido.' : 'CNPJ inválido.'); return; }
+      if(!(d.doc && d.razao && d.email && d.fone && d.aceite)){ alert('Preencha todos os campos obrigatórios e marque o aceite.'); return; }
+      if(!d.isPF && !d.resp){ alert('Informe o responsável (PJ).'); return; }
+
+      if(!sigPad || sigPad.isEmpty()) { alert('Por favor, assine no campo de assinatura.'); return; }
+      const assinaturaPNG = sigPad.toDataURL('image/png');
+
+      const built = await buildPdf(d, assinaturaPNG, d.isPF);
+      const { pdf, docId, dataHora } = built;
+
+      const nameBase = d.razao.replace(/\s+/g,'_');
+      const fileName = 'Contrato_' + nameBase + '_' + docId + '.pdf';
+      pdf.save(fileName);
+
+      const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
+      const resumo = 'Proposta Help!%0APlano: ' + encodeURIComponent(d.plano)
+        + '%0AValor: ' + encodeURIComponent(d.valorPlano)
+        + '%0A' + rotDoc + ': ' + encodeURIComponent(d.doc)
+        + '%0ANome/Razão: ' + encodeURIComponent(d.razao)
+        + (d.isPF ? '' : '%0AResponsável: ' + encodeURIComponent(d.resp||''))
+        + '%0AE-mail: ' + encodeURIComponent(d.email)
+        + '%0AFone: ' + encodeURIComponent(d.fone)
+        + '%0AData/Hora: ' + encodeURIComponent(dataHora)
+        + '%0AID: ' + encodeURIComponent(docId);
+
+      window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + resumo, '_blank');
+      showToast(); shootConfetti();
+    }catch(err){
+      console.error(err);
+      alert('Não foi possível gerar o PDF. Tente novamente.');
+    }finally{
+      btn.disabled = false; btn.textContent = originalText;
+    }
+  }
+
+  // ---------- Listeners ----------
+  window.addEventListener('load', ()=>{
+    initSigPad();
+    applyTipo();
+    updateValor();
+    document.getElementById('rPF').addEventListener('change', applyTipo);
+    document.getElementById('rPJ').addEventListener('change', applyTipo);
+    document.getElementById('fldPlano').addEventListener('change', updateValor);
+    document.getElementById('fldDoc').addEventListener('input', (e)=> maskDoc(e.target));
+    document.getElementById('fldFone').addEventListener('input', (e)=> maskPhone(e.target));
+    document.getElementById('btnLimpar').addEventListener('click', clearSignature);
+    document.getElementById('formAssinatura').addEventListener('submit', onSubmit);
+  });
+  window.addEventListener('resize', handleResize, { passive:true });
 </script>
 </body>
 </html>
