@@ -18,87 +18,26 @@
     .foot .id{font-weight:600}
     .opt{display:inline} .hidden{display:none}
     .invalid{color:#b00020; text-decoration: underline dotted;}
-    /* Gate */
-    #gate{position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
-    #gate .card{width:min(760px,96vw);border:1px solid #ddd;border-radius:12px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-    #gate .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    #gate input{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px}
-    #gate button{padding:10px 14px;border:0;border-radius:10px;background:#111;color:#fff;cursor:pointer}
-    #gate small{color:#b00020;display:none}
-    #pad{border:1px dashed #aaa;border-radius:8px;touch-action:none}
   </style>
 </head>
 <body>
 
-  <!-- GATE: escolha CPF/CNPJ, coleta dados e assinatura -->
-  <div id="gate">
-    <div class="card">
-      <h2 style="margin:0 0 12px;font-family:Montserrat,sans-serif;">Identificação do Contratante</h2>
-
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-        <label><input type="radio" name="tipo" value="PF" checked> Pessoa Física (CPF)</label>
-        <label><input type="radio" name="tipo" value="PJ"> Pessoa Jurídica (CNPJ)</label>
-      </div>
-
-      <div class="grid">
-        <div>
-          <label>Nome/Razão Social</label>
-          <input id="i-razao" placeholder="Ex.: Padaria Aurora Ltda">
-        </div>
-        <div>
-          <label>CPF/CNPJ</label>
-          <input id="i-doc" placeholder="CPF">
-          <small id="e-doc">Documento inválido.</small>
-        </div>
-        <div>
-          <label>E-mail</label>
-          <input id="i-email" type="email" placeholder="contato@exemplo.com">
-        </div>
-        <div>
-          <label>Telefone</label>
-          <input id="i-fone" placeholder="(11) 99999-9999">
-          <small id="e-fone">Telefone inválido.</small>
-        </div>
-        <div>
-          <label>RG (opcional)</label>
-          <input id="i-rg" placeholder="RG">
-        </div>
-        <div>
-          <label>Endereço (opcional)</label>
-          <input id="i-end" placeholder="Rua, nº, bairro, cidade/UF">
-        </div>
-      </div>
-
-      <div style="margin:14px 0 6px">Assinatura (desenhe abaixo)</div>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <canvas id="pad" width="600" height="120"></canvas>
-        <button id="clear" type="button" style="background:#f7f7f7;color:#111;border:1px solid #bbb">Limpar</button>
-      </div>
-      <small id="e-sign">Faça sua assinatura no quadro.</small>
-
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
-        <button id="go" type="button">Concluir e aplicar no contrato</button>
-      </div>
-    </div>
-  </div>
-  <!-- /GATE -->
-
   <!-- Página 1 -->
   <div class="page">
     <h1>Contrato de Prestação de Serviços de Marketing Digital</h1>
-    <p class="muted mb">Data: <span data-date>{{DATA}}</span></p>
+    <p class="muted mb">Data: <span>{{DATA}}</span></p>
 
     <h2>1. Partes</h2>
     <p>
       <strong>Contratante:</strong>
-      <span data-razao>{{RAZAO}}</span>
-      (<span data-pessoa>{{PESSOA_TIPO}}</span>),
-      CPF/CNPJ <span data-doc data-validate="doc">{{DOC_ID}}</span>
-      <span class="opt" data-opt="rg"> • RG: <span data-rg>{{RG}}</span></span>,
-      <span class="opt" data-opt="endereco">Endereço: <span data-endereco>{{ENDERECO}}</span></span>,
-      e-mail <span data-email>{{EMAIL}}</span>,
-      telefone <span data-fone data-validate="fone">{{FONE}}</span>.
-      <span class="opt" data-opt="representante"> Representado por <span data-representante>{{REPRESENTANTE}}</span> (se aplicável).</span>
+      {{RAZAO}}
+      ({{PESSOA_TIPO}}),
+      CPF/CNPJ {{DOC_ID}}
+      <span class="opt"> • RG: {{RG}}</span>,
+      <span class="opt">Endereço: {{ENDERECO}}</span>,
+      e-mail {{EMAIL}},
+      telefone {{FONE}}.
+      <span class="opt"> Representado por {{RESP}} (se aplicável).</span>
     </p>
     <p><strong>Contratada:</strong> HELP! AGÊNCIA DE MARKETING.</p>
 
@@ -122,7 +61,7 @@
 
     <div class="foot">
       <div class="id">ID: {{DOCID}}</div>
-      <div><span data-razao>{{RAZAO}}</span> • {{DATETIME}}</div>
+      <div>{{RAZAO}} • {{DATETIME}}</div>
       <div>Página 1/4</div>
     </div>
   </div>
@@ -155,7 +94,7 @@
 
     <div class="foot">
       <div class="id">ID: {{DOCID}}</div>
-      <div><span data-razao>{{RAZAO}}</span> • {{DATETIME}}</div>
+      <div>{{RAZAO}} • {{DATETIME}}</div>
       <div>Página 2/4</div>
     </div>
   </div>
@@ -194,22 +133,21 @@
       </div>
       <div class="box">
         <div class="hr"></div>
-        <div><strong><span data-razao>{{RAZAO}}</span></strong><br/>Contratante</div>
+        <div><strong>{{RAZAO}}</strong><br/>Contratante</div>
       </div>
     </div>
 
     <div style="margin-top:18px">
       <div><strong>Assinatura do Contratante:</strong></div>
-      <!-- Assinatura é injetada aqui -->
-      <img data-signature alt="Assinatura do Contratante" style="max-height:80px; display:block;">
-      <div class="muted">Assinado digitalmente em <span data-date>{{DATA}}</span></div>
-      <div class="muted opt" data-opt="assinante-doc">CPF/CNPJ do assinante: <span data-doc data-validate="doc">{{DOC_ID}}</span></div>
-      <div class="muted opt" data-opt="assinante-rg">RG do assinante: <span data-rg-ass>{{RG_ASS}}</span></div>
+      <!-- Assinatura injetada pelo gerador -->
+      {{ASSINATURA}}
+      <div class="muted">Assinado digitalmente em {{DATA}}</div>
+      <div class="muted">CPF/CNPJ do assinante: {{DOC_ID}}</div>
     </div>
 
     <div class="foot">
       <div class="id">ID: {{DOCID}}</div>
-      <div><span data-razao>{{RAZAO}}</span> • {{DATETIME}}</div>
+      <div>{{RAZAO}} • {{DATETIME}}</div>
       <div>Página 3/4</div>
     </div>
   </div>
@@ -229,128 +167,10 @@
 
     <div class="foot">
       <div class="id">ID: {{DOCID}}</div>
-      <div><span data-razao>{{RAZAO}}</span> • {{DATETIME}}</div>
+      <div>{{RAZAO}} • {{DATETIME}}</div>
       <div>Página 4/4</div>
     </div>
   </div>
-
-  <script>
-    (function(){
-      // Helpers
-      const $ = sel => document.querySelector(sel);
-      const getDigits = s => (s||'').toString().replace(/\D+/g,'');
-      const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s||'');
-      const maskCPF = d => d.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/,'$1.$2.$3-$4');
-      const maskCNPJ = d => d.replace(/(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})/,'$1.$2.$3/$4-$5');
-      const maskDoc = s => { const d=getDigits(s); return d.length===11?maskCPF(d):d.length===14?maskCNPJ(d):s; }
-      const maskPhone = s => { const d=getDigits(s); return d.length===11?d.replace(/(\\d{2})(\\d{5})(\\d{4})/,'($1) $2-$3'):d.length===10?d.replace(/(\\d{2})(\\d{4})(\\d{4})/,'($1) $2-$3'):s; }
-
-      // Validação CPF/CNPJ com DV
-      function vCPF(v){
-        const d=getDigits(v); if(d.length!==11 || /^(\\d)\\1{10}$/.test(d)) return false;
-        let s=0; for(let i=0;i<9;i++) s+= +d[i]*(10-i);
-        let r=(s*10)%11; if(r===10) r=0; if(r!== +d[9]) return false;
-        s=0; for(let i=0;i<10;i++) s+= +d[i]*(11-i);
-        r=(s*10)%11; if(r===10) r=0; return r=== +d[10];
-      }
-      function vCNPJ(v){
-        const d=getDigits(v); if(d.length!==14 || /^(\\d)\\1{13}$/.test(d)) return false;
-        const calc = (len)=>{ const f=(len===12)?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2];
-          let s=0; for(let i=0;i<f.length;i++) s+= +d[i]*f[i]; const r=s%11; return r<2?0:11-r; };
-        return calc(12)=== +d[12] && calc(13)=== +d[13];
-      }
-      function validDoc(s){ const d=getDigits(s); return d.length===11?vCPF(d):d.length===14?vCNPJ(d):false; }
-      function validPhone(s){ const d=getDigits(s); return d.length===10 || d.length===11; }
-
-      // Campos
-      const iDoc = $('#i-doc'), iFone = $('#i-fone'), iRazao = $('#i-razao');
-      const eDoc = $('#e-doc'), eFone = $('#e-fone'), eSign = $('#e-sign');
-
-      // Máscara ao digitar
-      iDoc.addEventListener('input', ()=>{ iDoc.value = maskDoc(iDoc.value); eDoc.style.display='none'; });
-      iFone.addEventListener('input', ()=>{ iFone.value = maskPhone(iFone.value); eFone.style.display='none'; });
-
-      // Toggle placeholder PF/PJ
-      document.querySelectorAll('input[name="tipo"]').forEach(r=>{
-        r.addEventListener('change', ()=>{
-          const d = getDigits(iDoc.value);
-          iDoc.placeholder = r.value==='PF' ? 'CPF' : 'CNPJ';
-          if(r.value==='PF' && d.length===14) iDoc.value='';
-          if(r.value==='PJ' && d.length===11) iDoc.value='';
-          eDoc.style.display='none';
-        });
-      });
-
-      // Canvas assinatura
-      const pad = $('#pad'), ctx = pad.getContext('2d');
-      let drawing=false, signed=false, last=null;
-      function pos(e){ const r=pad.getBoundingClientRect(); const pt=('touches' in e)? e.touches[0] : e; return {x:(pt.clientX-r.left), y:(pt.clientY-r.top)}; }
-      function line(a,b){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineWidth=2; ctx.strokeStyle='#111'; ctx.lineCap='round'; ctx.stroke(); ctx.closePath(); }
-      function start(e){ drawing=true; signed=true; last=pos(e); e.preventDefault(); }
-      function move(e){ if(!drawing) return; const p=pos(e); line(last,p); last=p; e.preventDefault(); }
-      function end(){ drawing=false; last=null; }
-      pad.addEventListener('mousedown', start); pad.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-      pad.addEventListener('touchstart', start, {passive:false}); pad.addEventListener('touchmove', move, {passive:false}); pad.addEventListener('touchend', end);
-      $('#clear').addEventListener('click', ()=>{ ctx.clearRect(0,0,pad.width,pad.height); signed=false; });
-
-      // Submeter e aplicar no contrato
-      $('#go').addEventListener('click', ()=>{
-        const tipo = document.querySelector('input[name="tipo"]:checked').value; // PF | PJ
-        const razao = iRazao.value.trim();
-        const doc = iDoc.value.trim();
-        const email = $('#i-email').value.trim();
-        const fone = iFone.value.trim();
-        const rg = $('#i-rg').value.trim();
-        const end = $('#i-end').value.trim();
-
-        // Validações mínimas
-        let ok = true;
-        if(!razao) { iRazao.focus(); ok=false; }
-        if(!validDoc(doc)) { eDoc.style.display='inline'; ok=false; }
-        if(email && !isEmail(email)) { alert('E-mail inválido.'); ok=false; }
-        if(fone && !validPhone(fone)) { eFone.style.display='inline'; ok=false; }
-        if(!signed){ eSign.style.display='inline'; ok=false; }
-        if(!ok) return;
-
-        // Preenche contrato
-        const setTxt = (sel, val) => document.querySelectorAll(sel).forEach(el=> el.textContent = val || '');
-        setTxt('[data-razao]', razao);
-        setTxt('[data-doc]', doc);
-        setTxt('[data-email]', email);
-        setTxt('[data-fone]', fone);
-        setTxt('[data-rg]', rg);
-        setTxt('[data-endereco]', end);
-        setTxt('[data-pessoa]', tipo==='PF' ? 'Pessoa Física' : 'Pessoa Jurídica');
-
-        // Máscaras visuais finais
-        document.querySelectorAll('[data-doc]').forEach(el=> el.textContent = maskDoc(el.textContent));
-        document.querySelectorAll('[data-fone]').forEach(el=> el.textContent = maskPhone(el.textContent));
-
-        // Oculta blocos opcionais vazios
-        const opt = [
-          {wrap:'[data-opt="rg"]', valueSel:'[data-rg]'},
-          {wrap:'[data-opt="endereco"]', valueSel:'[data-endereco]'}
-        ];
-        opt.forEach(({wrap,valueSel})=>{
-          document.querySelectorAll(wrap).forEach(w=>{
-            const v = (w.querySelector(valueSel)?.textContent)||'';
-            if(!v.trim()) w.style.display='none';
-          });
-        });
-
-        // Assinatura -> <img data-signature>
-        const png = pad.toDataURL('image/png');
-        const img = document.querySelector('[data-signature]');
-        if(img){ img.src = png; img.style.display='block'; }
-
-        // Fecha gate
-        document.getElementById('gate').style.display='none';
-
-        // Opcional: imprimir/gerar PDF aqui
-        // window.print();
-      });
-    })();
-  </script>
 
 </body>
 </html>
