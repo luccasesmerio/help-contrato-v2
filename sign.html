@@ -239,7 +239,7 @@
       if(!resp.ok) throw new Error('HTTP '+resp.status);
       return await resp.text();
     }catch(_){
-      return INTERNAL_TEMPLATE;
+      return INTERNAL_TEMPLATE; // fallback garante .page
     }
   }
 
@@ -338,15 +338,16 @@
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Gerando...';
 
-    // 4) abrir aba (reduz bloqueio) — só depois de tudo validado
-    let wa = window.open('about:blank', '_blank');
+    // 4) abre aba antes (reduz bloqueio), segura redirecionamento até concluir PDF
+    let waWin = null;
+    try { waWin = window.open('about:blank', '_blank'); } catch(_) {}
 
     try{
       const assinaturaPNG = sigPad.toDataURL('image/png'); // síncrono
       const { pdf, docId, dataHora } = await buildPdf(d, assinaturaPNG, d.isPF);
 
       const fileName = 'Contrato_' + d.razao.replace(/\s+/g,'_') + '_' + docId + '.pdf';
-      pdf.save(fileName);
+      pdf.save(fileName); // jsPDF v2.x não retorna Promise
 
       const rotDoc = d.isPF ? 'CPF' : 'CNPJ';
       const resumo = [
@@ -360,19 +361,26 @@
         'Fone: ' + d.fone,
         'Data/Hora: ' + dataHora,
         'ID: ' + docId
-      ].filter(Boolean).join('%0A');
+      ].filter(Boolean).join('\n'); // << correção: \n (sem %0A)
 
       const WHATSAPP_NUMBER = '5519984278886'; // ajuste
       const waUrl = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(resumo);
 
-      if (wa) wa.location.href = waUrl; else window.location.href = waUrl;
+      // dá um fôlego pro download iniciar antes de redirecionar
+      setTimeout(()=>{
+        if (waWin && !waWin.closed) {
+          waWin.location.href = waUrl;
+        } else {
+          window.location.href = waUrl; // fallback se popup for bloqueado
+        }
+      }, 600);
 
-      showToast(); 
+      showToast();
       shootConfetti();
     }catch(err){
       console.error(err);
       alert('Não foi possível gerar o PDF. Veja o console.');
-      if (wa && !wa.closed) wa.close(); // evita aba em branco
+      if (waWin && !waWin.closed) waWin.close(); // evita aba em branco
     }finally{
       btn.disabled = false; btn.textContent = originalText;
     }
